@@ -2,7 +2,7 @@
 // @id             iitc-plugin-smooth-user-follow
 // @name           IITC plugin: Smooth User Follow
 // @category       Controls
-// @version        0.1.3-dev
+// @version        0.1.5-dev
 // @namespace      https://github.com/mdiehn/iitc-smooth-user-follow
 // @updateURL      http://localhost:8000/dist/smooth-user-follow.meta.js
 // @downloadURL    http://localhost:8000/dist/smooth-user-follow.user.js
@@ -28,17 +28,25 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   const plugin = window.plugin.smoothUserFollow;
 
   plugin.pluginId = 'smooth-user-follow';
-  plugin.version = '0.1.3-dev';
-  plugin.buildTime = '2026-05-17T04:10:03.050Z';
+  plugin.version = '0.1.5-dev';
+  plugin.buildTime = '2026-05-17T04:24:55.451Z';
 
   plugin.settings = Object.assign(
     {
       enabled: true,
       // Steady camera follow: location updates set the target, and a camera
-      // loop eases the map center toward that target. No viewport bias yet.
+      // loop eases the map center toward a predicted target. Bias and
+      // heading-up rotation are experimental and can be disabled separately.
       cameraIntervalMs: 100,
       cameraSmoothing: 0.22,
       cameraStopDistanceMeters: 1.5,
+      predictionMaxMs: 1500,
+      viewportBiasEnabled: true,
+      viewportBiasY: 0.70,
+      headingIndicatorEnabled: true,
+      headingUpEnabled: true,
+      rotationSmoothing: 0.18,
+      rotationMinSpeedMps: 2,
       simulatorSpeedMps: 12,
       simulatorIntervalMs: 250,
       simulatorSegmentLengthMeters: 350,
@@ -53,9 +61,15 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       originalOnLocationChange: null,
       originalLocate: null,
       latestLatLng: null,
+      previousFix: null,
+      latestFix: null,
       cameraTargetLatLng: null,
-      cameraTimer: null,
-      cameraStepping: false,
+      cameraCenterTargetLatLng: null,
+      cameraAnimationFrame: null,
+      cameraLastFrameMs: null,
+      mapRotationDeg: 0,
+      headingMarker: null,
+      headingBearingDeg: null,
       control: null,
       followButton: null,
       simulatorButton: null,
@@ -127,7 +141,6 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
     userLocation.onLocationChange = function smoothUserFollowOnLocationChange(lat, lng) {
       const latlng = new L.LatLng(lat, lng);
-      plugin.state.latestLatLng = latlng;
 
       const originalFollow = !!userLocation.follow;
       const shouldOwnCamera = plugin.shouldOwnFollowCamera(originalFollow);
@@ -140,9 +153,7 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
         if (shouldOwnCamera) userLocation.follow = originalFollow;
       }
 
-      if (plugin.isFollowing()) {
-        plugin.updateCameraTarget(latlng);
-      }
+      plugin.recordLocationFix(latlng);
     };
 
     plugin.state.originalLocate = userLocation.locate;
@@ -193,10 +204,14 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
     if (enabled) {
       const latlng = plugin.getCurrentUserLatLng();
-      if (latlng) plugin.updateCameraTarget(latlng, { snap: true });
+      if (latlng) {
+        plugin.recordLocationFix(latlng, { timestampMs: Date.now() });
+        plugin.updateCameraTarget(latlng, { snap: true });
+      }
       plugin.startCameraLoop();
     } else {
       plugin.stopCameraLoop();
+      plugin.resetMapOrientation();
     }
   };
 
@@ -213,14 +228,14 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     return latlng;
   };
 
-  plugin.publishLocation = function (lat, lng) {
+  plugin.publishLocation = function (lat, lng, metadata = {}) {
     if (plugin.hasRealUserLocation()) {
       if (!plugin.state.wrapped) plugin.wrapUserLocation();
       window.plugin.userLocation.onLocationChange(lat, lng);
       return;
     }
 
-    plugin.updateFallbackLocation(lat, lng);
+    plugin.updateFallbackLocation(lat, lng, metadata);
   };
 
   plugin.ensureFallbackMarker = function () {
@@ -265,17 +280,58 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     return true;
   };
 
-  plugin.updateFallbackLocation = function (lat, lng) {
+  plugin.updateFallbackLocation = function (lat, lng, metadata = {}) {
     if (!plugin.ensureFallbackMarker()) return;
 
     const latlng = new L.LatLng(lat, lng);
-    plugin.state.latestLatLng = latlng;
     plugin.state.fallbackLatLng = latlng;
     plugin.state.fallbackMarker.setLatLng(latlng);
     plugin.state.fallbackCircle.setLatLng(latlng);
+    plugin.recordLocationFix(latlng, metadata);
+  };
+
+  plugin.recordLocationFix = function (latlng, metadata = {}) {
+    if (!latlng) return;
+
+    const timestampMs = Number(metadata.timestampMs || Date.now());
+    const previousFix = plugin.state.latestFix;
+    const fix = {
+      latlng,
+      timestampMs,
+      speedMps: Number.isFinite(Number(metadata.speedMps)) ? Number(metadata.speedMps) : null,
+      bearingDeg: Number.isFinite(Number(metadata.bearingDeg)) ? plugin.normalizeBearing(Number(metadata.bearingDeg)) : null,
+    };
+
+    if (previousFix?.latlng && previousFix?.timestampMs && timestampMs > previousFix.timestampMs) {
+      const elapsedSeconds = Math.max(0.001, (timestampMs - previousFix.timestampMs) / 1000);
+      const distanceMeters = plugin.distanceMeters(previousFix.latlng, latlng);
+
+      if (fix.speedMps === null && distanceMeters >= 0.5) {
+        fix.speedMps = distanceMeters / elapsedSeconds;
+      }
+
+      if (fix.bearingDeg === null && distanceMeters >= 0.5) {
+        fix.bearingDeg = plugin.bearingDegrees(previousFix.latlng, latlng);
+      }
+    }
+
+    if (fix.speedMps === null) fix.speedMps = previousFix?.speedMps || 0;
+    if (fix.bearingDeg === null) fix.bearingDeg = previousFix?.bearingDeg ?? plugin.state.headingBearingDeg;
+
+    plugin.state.previousFix = previousFix;
+    plugin.state.latestFix = fix;
+    plugin.state.latestLatLng = latlng;
+
+    if (fix.bearingDeg !== null && Number.isFinite(fix.bearingDeg)) {
+      plugin.state.headingBearingDeg = plugin.normalizeBearing(fix.bearingDeg);
+      plugin.updateHeadingIndicator(latlng, plugin.state.headingBearingDeg);
+    } else {
+      plugin.updateHeadingIndicator(latlng, null);
+    }
 
     if (plugin.isFollowing()) {
-      plugin.updateCameraTarget(latlng);
+      plugin.updateCameraTarget(plugin.getPredictedLatLng(Date.now()));
+      plugin.startCameraLoop();
     }
   };
 
@@ -285,7 +341,10 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     plugin.state.cameraTargetLatLng = latlng;
 
     if (options.snap) {
-      window.map.panTo(latlng, { animate: false });
+      const centerTarget = plugin.getCameraCenterForTarget(latlng);
+      plugin.state.cameraCenterTargetLatLng = centerTarget;
+      window.map.panTo(centerTarget, { animate: false });
+      plugin.applyMapPaneTransform();
       return;
     }
 
@@ -293,26 +352,24 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   };
 
   plugin.startCameraLoop = function () {
-    if (plugin.state.cameraTimer || !window.map) return;
+    if (plugin.state.cameraAnimationFrame || !window.map) return;
 
-    plugin.state.cameraTimer = window.setInterval(
-      plugin.stepCameraTowardTarget,
-      plugin.getCameraIntervalMs()
-    );
+    plugin.state.cameraLastFrameMs = null;
+    plugin.state.cameraAnimationFrame = window.requestAnimationFrame(plugin.stepCameraTowardTarget);
   };
 
   plugin.stopCameraLoop = function () {
-    if (!plugin.state.cameraTimer) return;
+    if (!plugin.state.cameraAnimationFrame) return;
 
-    window.clearInterval(plugin.state.cameraTimer);
-    plugin.state.cameraTimer = null;
-    plugin.state.cameraStepping = false;
+    window.cancelAnimationFrame(plugin.state.cameraAnimationFrame);
+    plugin.state.cameraAnimationFrame = null;
+    plugin.state.cameraLastFrameMs = null;
   };
 
   plugin.getCameraIntervalMs = function () {
     const interval = Number(plugin.settings.cameraIntervalMs);
     if (!Number.isFinite(interval)) return 100;
-    return Math.max(25, interval);
+    return Math.max(16, interval);
   };
 
   plugin.getCameraSmoothing = function () {
@@ -327,35 +384,160 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     return Math.max(0, distance);
   };
 
-  plugin.stepCameraTowardTarget = function () {
-    if (plugin.state.cameraStepping) return;
+  plugin.getViewportBiasY = function () {
+    const biasY = Number(plugin.settings.viewportBiasY);
+    if (!Number.isFinite(biasY)) return 0.70;
+    return Math.max(0.50, Math.min(0.90, biasY));
+  };
+
+  plugin.getRotationSmoothing = function () {
+    const smoothing = Number(plugin.settings.rotationSmoothing);
+    if (!Number.isFinite(smoothing)) return 0.18;
+    return Math.max(0.01, Math.min(1, smoothing));
+  };
+
+  plugin.getRotationMinSpeedMps = function () {
+    const speed = Number(plugin.settings.rotationMinSpeedMps);
+    if (!Number.isFinite(speed)) return 2;
+    return Math.max(0, speed);
+  };
+
+  plugin.getPredictionMaxMs = function () {
+    const maxMs = Number(plugin.settings.predictionMaxMs);
+    if (!Number.isFinite(maxMs)) return 1500;
+    return Math.max(0, Math.min(5000, maxMs));
+  };
+
+  plugin.getPredictedLatLng = function (nowMs = Date.now()) {
+    const fix = plugin.state.latestFix;
+    if (!fix?.latlng) return plugin.state.cameraTargetLatLng || plugin.state.latestLatLng;
+
+    const speedMps = Math.max(0, Number(fix.speedMps || 0));
+    const bearingDeg = Number(fix.bearingDeg);
+    const elapsedMs = Math.max(0, Math.min(plugin.getPredictionMaxMs(), Number(nowMs) - Number(fix.timestampMs || nowMs)));
+
+    if (!Number.isFinite(bearingDeg) || speedMps <= 0 || elapsedMs <= 0) return fix.latlng;
+
+    return plugin.destinationPoint(fix.latlng, bearingDeg, (speedMps * elapsedMs) / 1000);
+  };
+
+  plugin.stepCameraTowardTarget = function (frameMs) {
     if (!plugin.isFollowing()) {
       plugin.stopCameraLoop();
+      plugin.resetMapOrientation();
       return;
     }
 
-    const target = plugin.state.cameraTargetLatLng || plugin.state.latestLatLng;
-    if (!window.map || !target) return;
+    const target = plugin.getPredictedLatLng(Date.now());
+    if (!window.map || !target) {
+      plugin.state.cameraAnimationFrame = window.requestAnimationFrame(plugin.stepCameraTowardTarget);
+      return;
+    }
+
+    const lastFrameMs = plugin.state.cameraLastFrameMs || frameMs;
+    const elapsedMs = Math.max(1, Number(frameMs) - Number(lastFrameMs));
+
+    plugin.stepMapRotation(elapsedMs);
+    plugin.state.cameraTargetLatLng = target;
+
+    const centerTarget = plugin.getCameraCenterForTarget(target);
+    plugin.state.cameraCenterTargetLatLng = centerTarget;
 
     const current = window.map.getCenter();
-    const remainingMeters = plugin.distanceMeters(current, target);
-    if (remainingMeters <= plugin.getCameraStopDistanceMeters()) return;
+    const remainingMeters = plugin.distanceMeters(current, centerTarget);
+    const stopDistanceMeters = plugin.getCameraStopDistanceMeters();
 
-    plugin.state.cameraStepping = true;
+    if (remainingMeters > stopDistanceMeters) {
+      const baseIntervalMs = plugin.getCameraIntervalMs();
+      const smoothing = plugin.getCameraSmoothing();
+      const alpha = 1 - Math.pow(1 - smoothing, elapsedMs / baseIntervalMs);
 
-    try {
       const zoom = window.map.getZoom();
       const currentPoint = window.map.project(current, zoom);
-      const targetPoint = window.map.project(target, zoom);
-      const nextPoint = currentPoint.add(
-        targetPoint.subtract(currentPoint).multiplyBy(plugin.getCameraSmoothing())
-      );
+      const targetPoint = window.map.project(centerTarget, zoom);
+      const nextPoint = currentPoint.add(targetPoint.subtract(currentPoint).multiplyBy(alpha));
       const nextCenter = window.map.unproject(nextPoint, zoom);
 
       window.map.panTo(nextCenter, { animate: false });
-    } finally {
-      plugin.state.cameraStepping = false;
     }
+
+    plugin.applyMapPaneTransform();
+    plugin.state.cameraLastFrameMs = frameMs;
+    plugin.state.cameraAnimationFrame = window.requestAnimationFrame(plugin.stepCameraTowardTarget);
+  };
+
+  plugin.getCameraCenterForTarget = function (target) {
+    if (!window.map || !target || !plugin.settings.viewportBiasEnabled) return target;
+
+    const zoom = window.map.getZoom();
+    const size = window.map.getSize();
+    const targetPoint = window.map.project(target, zoom);
+    const desiredScreenOffset = new L.Point(0, size.y * (plugin.getViewportBiasY() - 0.5));
+    const mapOffset = plugin.rotatePoint(desiredScreenOffset, -plugin.getMapRotationDeg());
+    const centerPoint = targetPoint.subtract(mapOffset);
+
+    return window.map.unproject(centerPoint, zoom);
+  };
+
+  plugin.stepMapRotation = function (elapsedMs) {
+    const desired = plugin.getDesiredMapRotationDeg();
+    const baseIntervalMs = plugin.getCameraIntervalMs();
+    const smoothing = plugin.getRotationSmoothing();
+    const alpha = 1 - Math.pow(1 - smoothing, elapsedMs / baseIntervalMs);
+    const current = plugin.getMapRotationDeg();
+    const delta = plugin.shortestAngleDelta(current, desired);
+
+    plugin.state.mapRotationDeg = plugin.normalizeSignedBearing(current + delta * alpha);
+  };
+
+  plugin.getDesiredMapRotationDeg = function () {
+    if (!plugin.settings.headingUpEnabled || !plugin.isFollowing()) return 0;
+
+    const fix = plugin.state.latestFix;
+    const speedMps = Number(fix?.speedMps || 0);
+    const bearingDeg = Number(fix?.bearingDeg ?? plugin.state.headingBearingDeg);
+
+    if (!Number.isFinite(bearingDeg) || speedMps < plugin.getRotationMinSpeedMps()) return plugin.getMapRotationDeg();
+    return plugin.normalizeSignedBearing(-bearingDeg);
+  };
+
+  plugin.getMapRotationDeg = function () {
+    return Number.isFinite(Number(plugin.state.mapRotationDeg)) ? Number(plugin.state.mapRotationDeg) : 0;
+  };
+
+  plugin.resetMapOrientation = function () {
+    plugin.state.mapRotationDeg = 0;
+    plugin.applyMapPaneTransform();
+  };
+
+  plugin.applyMapPaneTransform = function () {
+    if (!window.map?._mapPane || !window.L?.DomUtil) return;
+
+    const pane = window.map._mapPane;
+    const pos = L.DomUtil.getPosition(pane) || new L.Point(0, 0);
+    const size = window.map.getSize();
+    const rotationDeg = plugin.getMapRotationDeg();
+    const transformProp = L.DomUtil.TRANSFORM || 'transform';
+
+    pane.style.transformOrigin = `${size.x / 2 - pos.x}px ${size.y / 2 - pos.y}px`;
+    pane.style[transformProp] = `translate3d(${pos.x}px,${pos.y}px,0) rotate(${rotationDeg}deg)`;
+  };
+
+  plugin.rotatePoint = function (point, angleDeg) {
+    const angle = (Number(angleDeg) * Math.PI) / 180;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+
+    return new L.Point(point.x * cos - point.y * sin, point.x * sin + point.y * cos);
+  };
+
+  plugin.shortestAngleDelta = function (fromDeg, toDeg) {
+    return ((Number(toDeg) - Number(fromDeg) + 540) % 360) - 180;
+  };
+
+  plugin.normalizeSignedBearing = function (bearingDeg) {
+    const normalized = plugin.normalizeBearing(bearingDeg);
+    return normalized > 180 ? normalized - 360 : normalized;
   };
 
   plugin.distanceMeters = function (a, b) {
@@ -372,6 +554,62 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     const sinLng = Math.sin(deltaLng / 2);
     const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng;
     return radiusMeters * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  };
+
+
+  plugin.bearingDegrees = function (from, to) {
+    if (!from || !to) return null;
+
+    const lat1 = (from.lat * Math.PI) / 180;
+    const lat2 = (to.lat * Math.PI) / 180;
+    const deltaLng = ((to.lng - from.lng) * Math.PI) / 180;
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+    return plugin.normalizeBearing((Math.atan2(y, x) * 180) / Math.PI);
+  };
+
+  plugin.normalizeBearing = function (bearingDeg) {
+    return ((Number(bearingDeg) % 360) + 360) % 360;
+  };
+
+  plugin.ensureHeadingIndicator = function () {
+    if (!plugin.settings.headingIndicatorEnabled || !window.L || !window.map) return false;
+    if (plugin.state.headingMarker) return true;
+
+    const icon = new L.DivIcon({
+      iconSize: new L.Point(32, 32),
+      iconAnchor: new L.Point(16, 16),
+      className: 'smooth-user-follow-heading-marker',
+      html: '<div class="suf-heading-wrap"><div class="suf-heading-arrow"></div></div>',
+    });
+
+    plugin.state.headingMarker = new L.Marker(window.map.getCenter(), {
+      icon,
+      zIndexOffset: 350,
+      interactive: false,
+    });
+    plugin.state.headingMarker.addTo(window.map);
+    return true;
+  };
+
+  plugin.updateHeadingIndicator = function (latlng, bearingDeg) {
+    if (!plugin.settings.headingIndicatorEnabled || !latlng) return;
+    if (!plugin.ensureHeadingIndicator()) return;
+
+    plugin.state.headingMarker.setLatLng(latlng);
+
+    const markerElement = plugin.state.headingMarker.getElement();
+    const headingWrap = markerElement?.querySelector('.suf-heading-wrap');
+    if (!headingWrap) return;
+
+    if (bearingDeg === null || !Number.isFinite(Number(bearingDeg))) {
+      headingWrap.classList.add('suf-heading-unknown');
+      headingWrap.style.transform = '';
+      return;
+    }
+
+    headingWrap.classList.remove('suf-heading-unknown');
+    headingWrap.style.transform = `rotate(${plugin.normalizeBearing(bearingDeg)}deg)`;
   };
 
   plugin.injectStyles = function () {
@@ -411,6 +649,28 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
         background: #ffce00;
         border: 2px solid #111;
         box-shadow: 0 0 0 2px rgba(255, 206, 0, 0.35);
+      }
+      .smooth-user-follow-heading-marker {
+        pointer-events: none;
+      }
+      .smooth-user-follow-heading-marker .suf-heading-wrap {
+        width: 32px;
+        height: 32px;
+        transform-origin: 16px 16px;
+      }
+      .smooth-user-follow-heading-marker .suf-heading-arrow {
+        position: absolute;
+        left: 12px;
+        top: 0;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-bottom: 13px solid #ffce00;
+        filter: drop-shadow(0 0 2px #000);
+      }
+      .smooth-user-follow-heading-marker .suf-heading-unknown {
+        display: none;
       }
     `;
     document.head.appendChild(style);
@@ -477,10 +737,17 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   plugin.showDialog = function () {
     const html = `
       <div class="smooth-user-follow-dialog">
-        <p>Steady camera follow. No viewport biasing yet.</p>
+        <p>Steady camera follow with experimental viewport bias and heading-up rotation.</p>
         <label>Camera interval ms: <input id="suf-camera-interval" type="number" step="25" min="25" value="${plugin.settings.cameraIntervalMs}"></label>
         <label>Camera smoothing: <input id="suf-camera-smoothing" type="number" step="0.01" min="0.01" max="1" value="${plugin.settings.cameraSmoothing}"></label>
         <label>Stop distance meters: <input id="suf-camera-stop-distance" type="number" step="0.5" min="0" value="${plugin.settings.cameraStopDistanceMeters}"></label>
+        <label>Prediction max ms: <input id="suf-prediction-max" type="number" step="100" min="0" max="5000" value="${plugin.settings.predictionMaxMs}"></label>
+        <label>Viewport bias: <input id="suf-bias-enabled" type="checkbox" ${plugin.settings.viewportBiasEnabled ? 'checked' : ''}></label>
+        <label>User screen Y: <input id="suf-bias-y" type="number" step="0.01" min="0.5" max="0.9" value="${plugin.settings.viewportBiasY}"></label>
+        <label>Heading indicator: <input id="suf-heading-enabled" type="checkbox" ${plugin.settings.headingIndicatorEnabled ? 'checked' : ''}></label>
+        <label>Heading-up map: <input id="suf-heading-up-enabled" type="checkbox" ${plugin.settings.headingUpEnabled ? 'checked' : ''}></label>
+        <label>Rotation smoothing: <input id="suf-rotation-smoothing" type="number" step="0.01" min="0.01" max="1" value="${plugin.settings.rotationSmoothing}"></label>
+        <label>Rotation min speed m/s: <input id="suf-rotation-min-speed" type="number" step="0.5" min="0" value="${plugin.settings.rotationMinSpeedMps}"></label>
         <label>Simulator speed m/s: <input id="suf-sim-speed" type="number" step="1" min="0" value="${plugin.settings.simulatorSpeedMps}"></label>
         <label>Simulator interval ms: <input id="suf-sim-interval" type="number" step="50" min="50" value="${plugin.settings.simulatorIntervalMs}"></label>
         <p>Console helpers:</p>
@@ -509,13 +776,29 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       plugin.settings.cameraIntervalMs = Number($('#suf-camera-interval').val());
       plugin.settings.cameraSmoothing = Number($('#suf-camera-smoothing').val());
       plugin.settings.cameraStopDistanceMeters = Number($('#suf-camera-stop-distance').val());
+      plugin.settings.predictionMaxMs = Number($('#suf-prediction-max').val());
+      plugin.settings.viewportBiasEnabled = $('#suf-bias-enabled').is(':checked');
+      plugin.settings.viewportBiasY = Number($('#suf-bias-y').val());
+      plugin.settings.headingIndicatorEnabled = $('#suf-heading-enabled').is(':checked');
+      plugin.settings.headingUpEnabled = $('#suf-heading-up-enabled').is(':checked');
+      plugin.settings.rotationSmoothing = Number($('#suf-rotation-smoothing').val());
+      plugin.settings.rotationMinSpeedMps = Number($('#suf-rotation-min-speed').val());
       plugin.settings.simulatorSpeedMps = Number($('#suf-sim-speed').val());
       plugin.settings.simulatorIntervalMs = Number($('#suf-sim-interval').val());
 
-      if (plugin.state.cameraTimer && plugin.getCameraIntervalMs() !== oldCameraIntervalMs) {
+      if (plugin.state.cameraAnimationFrame && plugin.getCameraIntervalMs() !== oldCameraIntervalMs) {
         plugin.stopCameraLoop();
         plugin.startCameraLoop();
       }
+
+      if (!plugin.settings.headingIndicatorEnabled && plugin.state.headingMarker) {
+        window.map.removeLayer(plugin.state.headingMarker);
+        plugin.state.headingMarker = null;
+      } else if (plugin.settings.headingIndicatorEnabled && plugin.state.latestFix?.latlng) {
+        plugin.updateHeadingIndicator(plugin.state.latestFix.latlng, plugin.state.headingBearingDeg);
+      }
+
+      if (!plugin.settings.headingUpEnabled) plugin.resetMapOrientation();
 
       if (plugin.simulator.options) {
         plugin.simulator.options.speedMps = plugin.settings.simulatorSpeedMps;
@@ -607,7 +890,11 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       sim.bearing = (sim.bearing + 90) % 360;
     }
 
-    plugin.publishLocation(sim.position.lat, sim.position.lng);
+    plugin.publishLocation(sim.position.lat, sim.position.lng, {
+      timestampMs: Date.now(),
+      speedMps: Number(opts.speedMps),
+      bearingDeg: sim.bearing,
+    });
   };
 
   plugin.destinationPoint = function (latlng, bearingDeg, distanceMeters) {
