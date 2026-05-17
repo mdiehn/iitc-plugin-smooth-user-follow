@@ -2,7 +2,7 @@
 // @id             iitc-plugin-smooth-user-follow
 // @name           IITC plugin: Smooth User Follow
 // @category       Controls
-// @version        0.1.3-dev
+// @version        0.1.5-dev
 // @namespace      https://github.com/mdiehn/iitc-smooth-user-follow
 // @updateURL      http://localhost:8000/dist/smooth-user-follow.meta.js
 // @downloadURL    http://localhost:8000/dist/smooth-user-follow.user.js

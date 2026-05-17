@@ -1,6 +1,6 @@
 {
   "name": "iitc-smooth-user-follow",
-  "version": "0.1.3-dev",
+  "version": "0.1.5-dev",
   "private": true,
   "description": "IITC plugin that smooths user-location follow camera movement and provides a desktop movement simulator.",
   "scripts": {

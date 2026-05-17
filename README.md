@@ -2,7 +2,7 @@
 
 Small IITC helper plugin for testing smoother user-location following.
 
-This pass does **not** do viewport biasing. It keeps IITC north-up and uses a steady camera loop: location updates set the target, and the map center eases toward that target.
+This pass adds experimental viewport bias and heading-up map rotation on top of the steady camera loop. Both can be turned off from the settings dialog.
 
 ## What it does
 
@@ -12,15 +12,22 @@ This pass does **not** do viewport biasing. It keeps IITC north-up and uses a st
 - Suppresses the built-in abrupt follow recenter while smooth follow is active.
 - Uses a steady camera loop instead of dead-zone catch-up recentering.
 - Location updates set the camera target; the loop eases the map center toward it.
+- Can bias the user marker lower in the viewport so more map is visible ahead.
+- Can visually rotate the Leaflet map pane for heading-up follow mode.
 - Adds a tiny desktop control:
   - `SF` toggles smooth follow.
   - `SIM` starts/stops simulated movement for desktop testing.
+  - `...` opens tuning settings.
 
 ## Requirements
 
 For real GPS follow behavior, enable IITC's built-in **User Location** plugin.
 
 For desktop simulation only, the plugin can run without IITC User Location. In that case it creates a small fallback simulator marker so you can test camera movement without going for a drive.
+
+## Experimental heading-up note
+
+Heading-up mode is implemented as a visual CSS rotation of Leaflet's map pane. It is useful for follow-mode testing, but it may make normal map clicking/dragging feel odd while enabled. Turn off **Heading-up map** in settings if it interferes with regular IITC interaction.
 
 ## Build
 
@@ -102,3 +109,8 @@ window.plugin.smoothUserFollow.simulator.start({
 - Add heading/vector-aware north-up biasing.
 - Consider route-aware lookahead from Portal Route later.
 - Consider whether this should remain separate or be folded into IITC's `user-location.js`.
+
+
+## 0.1.4-dev notes
+
+This pass uses timestamped location fixes and predicts a short-term camera target between discrete fixes. The simulator still emits ordinary point updates, which exercise the same smoothing/prediction path as real location updates. A small heading indicator is overlaid on the user marker using the estimated bearing.

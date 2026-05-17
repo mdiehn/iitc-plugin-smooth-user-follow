@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.5-dev
+
+- Add experimental viewport bias so the user can sit lower in the visible map.
+- Add experimental heading-up visual map rotation based on estimated bearing.
+- Add settings for viewport bias, user screen Y position, heading-up rotation,
+  rotation smoothing, and minimum speed for rotation.
+- Pass simulator speed and bearing metadata into the shared location-fix path
+  when using the fallback simulator marker.
+
+## 0.1.4-dev
+
+- Switched the camera loop to `requestAnimationFrame`.
+- Added timestamped location fixes with speed and bearing estimation.
+- Added short-term predicted camera targets between discrete GPS/simulator fixes.
+- Added a heading indicator overlay on the user marker.
+- Added settings for prediction limit and heading indicator visibility.
+
+
 ## 0.1.3-dev
 
 - Replace dead-zone catch-up panning with a steady camera-follow loop.
