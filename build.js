@@ -12,7 +12,7 @@ const distDir = path.join(root, 'dist');
 const outPath = path.join(distDir, 'follow-mode.user.js');
 const metaPath = path.join(distDir, 'follow-mode.meta.js');
 
-const repo = 'mdiehn/iitc-follow-mode';
+const repo = 'mdiehn/iitc-plugin-follow-mode';
 const baseVersion = fs.readFileSync(versionFile, 'utf8').trim();
 const buildTime = new Date();
 const branch = getCurrentBranch();

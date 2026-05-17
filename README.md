@@ -6,15 +6,15 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.9-dev`
+Latest development build: `0.2.10-dev`
 
-Version 0.2.9-dev changes the README install links to the same GitHub raw URL form used by Portal Route, which works better for IITC Mobile installs.
+Version 0.2.10-dev updates the repository metadata and install URLs for the real `iitc-plugin-follow-mode` repo while keeping the dist files named `follow-mode.user.js` and `follow-mode.meta.js`.
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
 
-**Install:** [`follow-mode.user.js`](https://github.com/mdiehn/iitc-follow-mode/raw/refs/heads/main/dist/follow-mode.user.js)
+**Install:** [`follow-mode.user.js`](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.user.js)
 
-Plugin-manager metadata URL: [`follow-mode.meta.js`](https://github.com/mdiehn/iitc-follow-mode/raw/refs/heads/main/dist/follow-mode.meta.js)
+Plugin-manager metadata URL: [`follow-mode.meta.js`](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.meta.js)
 
 ## Quick start
 
