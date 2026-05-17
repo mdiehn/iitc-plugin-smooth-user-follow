@@ -2,11 +2,11 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode
 // @category       Controls
-// @version        0.2.3-dev
+// @version        0.2.4-dev.20260517110240
 // @namespace      https://github.com/mdiehn/iitc-follow-mode
-// @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js
-// @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js
-// @description    Use steady-camera IITC user-location follow movement, with a desktop movement simulator.
+// @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.meta.js
+// @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.user.js
+// @description    Use smooth heading-up IITC user-location follow movement.
 // @author         Mike Diehn and Frank
 // @match          https://intel.ingress.com/*
 // @match          https://*.ingress.com/intel*
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.3-dev';
-  plugin.buildTime = '2026-05-17T11:00:52.099Z';
+  plugin.version = '0.2.4-dev.20260517110240';
+  plugin.buildTime = '2026-05-17T11:02:40.898Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
