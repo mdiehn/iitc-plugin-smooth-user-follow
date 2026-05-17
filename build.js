@@ -57,8 +57,8 @@ function getCurrentBranch() {
 function updateReadmeInstallLinks() {
   if (!fs.existsSync(readmeFile)) return;
 
-  const readmeInstallUrl = `https://raw.githubusercontent.com/${repo}/refs/heads/${branch}/dist/follow-mode.user.js`;
-  const readmeMetaUrl = `https://raw.githubusercontent.com/${repo}/refs/heads/${branch}/dist/follow-mode.meta.js`;
+  const readmeInstallUrl = `https://github.com/${repo}/raw/refs/heads/${branch}/dist/follow-mode.user.js`;
+  const readmeMetaUrl = `https://github.com/${repo}/raw/refs/heads/${branch}/dist/follow-mode.meta.js`;
   const readme = fs.readFileSync(readmeFile, 'utf8');
   const updated = readme
     .replace(

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9-dev
+
+- Change README install and metadata links to GitHub raw URLs matching the Portal Route install style.
+- Keep generated userscript update/download metadata branch-aware.
+
 ## 0.2.8-dev
 
 - Apply Follow Mode option changes from the dialog **OK** button.
