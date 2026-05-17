@@ -5,12 +5,12 @@ const path = require('path');
 
 const root = __dirname;
 const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
-const srcPath = path.join(root, 'src', 'smooth-user-follow.js');
+const srcPath = path.join(root, 'src', 'follow-mode.js');
 const distDir = path.join(root, 'dist');
-const outPath = path.join(distDir, 'smooth-user-follow.user.js');
-const metaPath = path.join(distDir, 'smooth-user-follow.meta.js');
-const updateUrl = 'http://localhost:8000/dist/smooth-user-follow.meta.js';
-const downloadUrl = 'http://localhost:8000/dist/smooth-user-follow.user.js';
+const outPath = path.join(distDir, 'follow-mode.user.js');
+const metaPath = path.join(distDir, 'follow-mode.meta.js');
+const updateUrl = 'http://localhost:8000/dist/follow-mode.meta.js';
+const downloadUrl = 'http://localhost:8000/dist/follow-mode.user.js';
 
 const buildTime = new Date().toISOString();
 const source = fs.readFileSync(srcPath, 'utf8')
@@ -18,11 +18,11 @@ const source = fs.readFileSync(srcPath, 'utf8')
   .replaceAll('__BUILD_TIME__', buildTime);
 
 const metadata = `// ==UserScript==
-// @id             iitc-plugin-smooth-user-follow
-// @name           IITC plugin: Smooth User Follow
+// @id             iitc-plugin-follow-mode
+// @name           IITC plugin: Follow Mode
 // @category       Controls
 // @version        ${version}
-// @namespace      https://github.com/mdiehn/iitc-smooth-user-follow
+// @namespace      https://github.com/mdiehn/iitc-follow-mode
 // @updateURL      ${updateUrl}
 // @downloadURL    ${downloadUrl}
 // @description    Use steady-camera IITC user-location follow movement, with a desktop movement simulator.

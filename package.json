@@ -1,8 +1,8 @@
 {
-  "name": "iitc-smooth-user-follow",
-  "version": "0.1.6-dev",
+  "name": "iitc-follow-mode",
+  "version": "0.2.0-dev",
   "private": true,
-  "description": "IITC plugin that smooths user-location follow camera movement and provides a desktop movement simulator.",
+  "description": "IITC plugin that adds smooth, heading-up user-location follow mode.",
   "scripts": {
     "build": "node build.js",
     "clean": "rm -rf dist && mkdir -p dist",

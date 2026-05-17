@@ -1,23 +1,25 @@
 # Agent notes
 
-This repo contains a standalone IITC helper plugin.
+This repo contains a standalone IITC helper plugin that improves user-location
+follow behavior.
 
 Important constraints:
 
 - Do not implement Portal Route follow mode here.
 - Keep GPS/user-marker updates separate from map camera movement.
-- Do not add viewport biasing in the first pass.
-- Avoid triggering excessive Intel refreshes: keep camera panning thresholded and rate-limited.
+- Keep Intel fetch behavior separate from local smooth map movement.
+- Keep heading-up and viewport-bias behavior easy to turn off.
 - Prefer small, reviewable changes.
 
 Primary source file:
 
 ```text
-src/smooth-user-follow.js
+src/follow-mode.js
 ```
 
 Build output:
 
 ```text
-dist/smooth-user-follow.user.js
+dist/follow-mode.user.js
+dist/follow-mode.meta.js
 ```

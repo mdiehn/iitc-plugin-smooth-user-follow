@@ -1,18 +1,29 @@
 # Changelog
 
+## 0.2.0-dev
+
+- Rename the plugin to Follow Mode.
+- Rename the build output to `follow-mode.user.js` and `follow-mode.meta.js`.
+- Replace the mini control with four buttons: `SF`, `ROT`, `BIAS`, and `=`.
+- Remove mobile-unfriendly title tooltips from the mini control buttons.
+- Move simulator controls out of the mini control and into dev settings.
+- Split the settings dialog into main settings and hidden dev settings.
+- Persist settings in `localStorage`.
+- Add a proper README focused on initial use and the mini control.
+
 ## 0.1.6-dev
 
 - Auto-stop the simulator when real browser/IITC location fixes arrive.
 - Capture browser geolocation speed and heading when available.
-- Add supplemental browser geolocation while smooth follow is active so heading/speed metadata is available even if IITC already started its own watch.
+- Add supplemental browser geolocation while follow mode is active so heading/speed metadata is available even if IITC already started its own watch.
 - Add optional device-orientation heading for stationary heading-up rotation.
 - Prefer movement heading while moving and device orientation while stationary or slow.
 - Add settings for geolocation heading, device-orientation heading, stationary orientation speed, and simulator auto-stop.
 
 ## 0.1.5-dev
 
-- Add experimental viewport bias so the user can sit lower in the visible map.
-- Add experimental heading-up visual map rotation based on estimated bearing.
+- Add viewport bias so the user can sit lower in the visible map.
+- Add heading-up visual map rotation based on estimated bearing.
 - Add settings for viewport bias, user screen Y position, heading-up rotation,
   rotation smoothing, and minimum speed for rotation.
 - Pass simulator speed and bearing metadata into the shared location-fix path
@@ -25,7 +36,6 @@
 - Added short-term predicted camera targets between discrete GPS/simulator fixes.
 - Added a heading indicator overlay on the user marker.
 - Added settings for prediction limit and heading indicator visibility.
-
 
 ## 0.1.3-dev
 

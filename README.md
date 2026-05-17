@@ -1,40 +1,78 @@
-# IITC Smooth User Follow
+# IITC Follow Mode
 
-Small IITC helper plugin for testing smoother user-location following.
+Follow Mode gives IITC a more navigation-style user-location view.
 
-This pass adds experimental viewport bias, heading-up map rotation, simulator auto-stop on real GPS, and optional device-orientation heading for stationary rotation. The risky pieces can be turned off from the settings dialog.
+It keeps IITC's normal user-location marker updates, but replaces the abrupt
+camera catch-up behavior with smoother camera movement, optional heading-up map
+rotation, and optional viewport bias so more map is visible ahead of you.
 
-## What it does
+## Mini control
 
-- Wraps `window.plugin.userLocation.onLocationChange()` when IITC's User Location plugin is available.
-- Lets IITC's `user-location` plugin keep updating the marker, accuracy circle, orientation, and hooks.
-- Uses a small fallback marker for desktop simulation when IITC's User Location plugin is unavailable or not ready.
-- Suppresses the built-in abrupt follow recenter while smooth follow is active.
-- Uses a steady camera loop instead of dead-zone catch-up recentering.
-- Location updates set the camera target; the loop eases the map center toward it.
-- Can bias the user marker lower in the viewport so more map is visible ahead.
-- Can visually rotate the Leaflet map pane for heading-up follow mode.
-- Uses GPS/geolocation heading when the browser provides it.
-- Can use device orientation/compass heading while stationary or moving slowly.
-- Auto-stops the simulator when real GPS/location fixes arrive.
-- Adds a tiny desktop control:
-  - `SF` toggles smooth follow.
-  - `SIM` starts/stops simulated movement for desktop testing.
-  - `...` opens tuning settings.
+The plugin adds a small Leaflet-style control on the left side of the map:
+
+```text
+SF    smooth follow on/off
+ROT   heading-up map rotation on/off
+BIAS  viewport bias on/off
+=     settings
+```
+
+The buttons highlight when enabled. The buttons intentionally do not use hover
+tooltips, since those are annoying on mobile.
+
+## Main features
+
+- Smooth follow camera that eases toward a predicted user position.
+- Heading-up map rotation using movement heading, browser GPS heading, or phone
+  orientation when available.
+- Viewport bias that keeps the user lower on the screen, leaving more room
+  ahead.
+- Heading indicator overlay on the user marker.
+- Desktop simulator for testing movement without walking or driving.
+- Simulator auto-stop when real GPS/location data arrives.
 
 ## Requirements
 
-For real GPS follow behavior, enable IITC's built-in **User Location** plugin. Smooth User Follow also starts a supplemental browser geolocation watch while follow mode is enabled, so it can capture speed and heading metadata that IITC may not expose through `onLocationChange()`.
+For real GPS follow behavior, enable IITC's built-in **User Location** plugin.
+Follow Mode wraps that plugin so IITC still owns the user marker, accuracy
+circle, and normal user-location hooks.
 
-For desktop simulation only, the plugin can run without IITC User Location. In that case it creates a small fallback simulator marker so you can test camera movement without going for a drive.
+For desktop simulation only, Follow Mode can run without IITC User Location. It
+creates a small fallback marker so the camera behavior can be tested from a
+desktop browser.
 
-## Heading sources
+## Settings
 
-Browser geolocation heading is direction of travel. It usually does not change when you rotate the phone while standing still. Device orientation heading is used for stationary/slow heading-up rotation when available and permitted.
+The normal settings panel keeps only the common choices visible:
 
-## Experimental heading-up note
+- heading indicator on/off
+- phone orientation heading on/off
+- user screen position for viewport bias
+- simulator auto-stop when real GPS arrives
 
-Heading-up mode is implemented as a visual CSS rotation of Leaflet's map pane. It is useful for follow-mode testing, but it may make normal map clicking/dragging feel odd while enabled. Turn off **Heading-up map** in settings if it interferes with regular IITC interaction.
+The detailed tuning controls live under **Show dev settings**:
+
+- camera timing and smoothing
+- prediction limit
+- rotation smoothing and speed threshold
+- simulator speed, interval, and segment length
+- simulator start/stop button
+
+## Heading behavior
+
+Browser geolocation heading is direction of travel. It usually does not change
+when the phone rotates in place while standing still.
+
+Phone orientation heading is used when available and when the user is stopped or
+moving slowly. Some mobile browsers may require an extra permission prompt for
+orientation data.
+
+## Heading-up caveat
+
+Heading-up rotation is done as a visual CSS rotation of Leaflet's map pane. This
+works for follow-mode viewing, but normal map tapping or dragging can feel odd
+while the map is rotated. Turn off **ROT** when you want normal IITC map
+interaction.
 
 ## Build
 
@@ -45,83 +83,72 @@ npm run build
 Output:
 
 ```text
-dist/smooth-user-follow.user.js
-dist/smooth-user-follow.meta.js
+dist/follow-mode.user.js
+dist/follow-mode.meta.js
 ```
 
 ## Local dev install
-
-One easy loop:
 
 ```sh
 npm run dev
 ```
 
-That runs the build and starts a local web server on port 8000.
-
 Then install from:
 
 ```text
-http://localhost:8000/dist/smooth-user-follow.user.js
+http://localhost:8000/dist/follow-mode.user.js
 ```
 
-The generated `.user.js` and `.meta.js` headers also point to the local dev server:
+The generated `.user.js` and `.meta.js` headers point to the same local dev
+server:
 
 ```text
-@updateURL   http://localhost:8000/dist/smooth-user-follow.meta.js
-@downloadURL http://localhost:8000/dist/smooth-user-follow.user.js
+@updateURL   http://localhost:8000/dist/follow-mode.meta.js
+@downloadURL http://localhost:8000/dist/follow-mode.user.js
 ```
 
-Tampermonkey may cache aggressively. Bump `VERSION` or append a query string while testing.
+Tampermonkey may cache aggressively. Bump `VERSION` or append a query string
+while testing.
 
 ## Console helpers
 
 ```js
-window.plugin.smoothUserFollow.setFollowing(true);
-window.plugin.smoothUserFollow.setFollowing(false);
+window.plugin.followMode.setFollowing(true);
+window.plugin.followMode.setFollowing(false);
 
-window.plugin.smoothUserFollow.simulator.start();
-window.plugin.smoothUserFollow.simulator.stop();
-window.plugin.smoothUserFollow.simulator.step();
+window.plugin.followMode.simulator.start();
+window.plugin.followMode.simulator.stop();
+window.plugin.followMode.simulator.step();
 ```
 
 Optional simulator settings:
 
 ```js
-window.plugin.smoothUserFollow.simulator.start({
-  speedMps: 12,
+window.plugin.followMode.simulator.start({
+  speedMps: 30,
   intervalMs: 250,
   segmentLengthMeters: 350,
 });
 ```
 
-## First-pass defaults
+## Current defaults
 
 ```js
 {
-  enabled: true,
   cameraIntervalMs: 100,
   cameraSmoothing: 0.22,
   cameraStopDistanceMeters: 1.5,
+  predictionMaxMs: 1500,
+  viewportBiasEnabled: true,
+  viewportBiasY: 0.70,
+  headingIndicatorEnabled: true,
+  headingUpEnabled: true,
+  deviceOrientationHeadingEnabled: true,
   simulatorSpeedMps: 12,
   simulatorIntervalMs: 250,
 }
 ```
 
-`cameraSmoothing` controls how much of the remaining distance the camera moves each tick. Larger values catch up faster; smaller values feel heavier and smoother.
-
-## Future work
-
-- Add viewport biasing so the user appears lower on the screen.
-- Add heading/vector-aware north-up biasing.
-- Consider route-aware lookahead from Portal Route later.
-- Consider whether this should remain separate or be folded into IITC's `user-location.js`.
-
-
-## 0.1.6-dev notes
-
-The simulator still emits ordinary point updates, but real browser/IITC location fixes now stop it automatically by default. Smooth follow can use geolocation speed/heading when available, and device orientation can drive heading-up rotation while stationary.
-
-## 0.1.4-dev notes
-
-This pass uses timestamped location fixes and predicts a short-term camera target between discrete fixes. The simulator still emits ordinary point updates, which exercise the same smoothing/prediction path as real location updates. A small heading indicator is overlaid on the user marker using the estimated bearing.
+`cameraSmoothing` controls how much of the remaining distance the camera moves
+each base interval. Larger values catch up faster; smaller values feel heavier
+and smoother.
