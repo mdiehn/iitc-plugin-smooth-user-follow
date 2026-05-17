@@ -1,10 +1,20 @@
-# IITC Follow Mode
+# IITC plugin: Follow Mode
 
-Follow Mode gives IITC a more navigation-style user-location view.
+Follow Mode is an IITC plugin that makes the user-location view behave more like a navigation app.
 
-It keeps IITC's normal user-location marker updates, but replaces the abrupt
-camera catch-up behavior with smoother camera movement, optional heading-up map
-rotation, and optional viewport bias so more map is visible ahead of you.
+It keeps IITC's normal user-location marker updates, but replaces abrupt camera catch-up behavior with smoother movement, heading-up map rotation, and optional viewport bias so more map is visible ahead of you.
+
+## Status
+
+Latest development build: `0.2.3-dev`
+
+Version 0.2.3-dev polishes the plugin for initial testing as a standalone IITC helper, with compact mini-control buttons, simpler settings, heading-up rotation, viewport bias, and a desktop movement simulator under dev settings.
+
+Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **R** when you want normal map interaction.
+
+**Install:** [`follow-mode.user.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js)
+
+Plugin-manager metadata URL: [`follow-mode.meta.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js)
 
 ## Mini control
 
@@ -99,13 +109,9 @@ Then install from:
 http://localhost:8000/dist/follow-mode.user.js
 ```
 
-The generated `.user.js` and `.meta.js` headers point to the same local dev
-server:
-
-```text
-@updateURL   http://localhost:8000/dist/follow-mode.meta.js
-@downloadURL http://localhost:8000/dist/follow-mode.user.js
-```
+The generated `.user.js` and `.meta.js` headers now point to the real GitHub
+raw URLs. For local testing, load the localhost `.user.js` directly, or use
+your dev loader to override the source URL.
 
 Tampermonkey may cache aggressively. Bump `VERSION` or append a query string
 while testing.
