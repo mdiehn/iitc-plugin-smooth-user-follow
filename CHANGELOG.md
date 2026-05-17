@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8-dev
+
+- Apply Follow Mode option changes from the dialog **OK** button.
+- Remove the separate **Save options** button from the Options dialog.
+
 ## 0.2.7-dev
 
 - Update the userscript metadata description wording.

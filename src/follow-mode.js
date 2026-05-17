@@ -1087,8 +1087,6 @@ window.plugin.followMode = window.plugin.followMode || {};
             <p><code>window.plugin.followMode.simulator.start()</code></p>
           </fieldset>
         </div>
-
-        <button id="fm-save-settings" type="button">Save options</button>
       </div>
     `;
 
@@ -1098,6 +1096,12 @@ window.plugin.followMode = window.plugin.followMode || {};
         html,
         width: 430,
         id: 'follow-mode-options',
+        buttons: {
+          OK: function () {
+            plugin.saveSettingsFromDialog();
+            $(this).dialog('close');
+          },
+        },
       });
     } else {
       alert('Follow Mode options are available from window.plugin.followMode.settings');
@@ -1116,9 +1120,6 @@ window.plugin.followMode = window.plugin.followMode || {};
       $('#fm-sim-toggle').text(plugin.simulator.running ? 'Stop simulator' : 'Start simulator');
     });
 
-    $('#fm-save-settings').on('click', () => {
-      plugin.saveSettingsFromDialog();
-    });
   };
 
   plugin.saveSettingsFromDialog = function () {

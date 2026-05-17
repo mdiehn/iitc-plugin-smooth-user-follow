@@ -6,9 +6,9 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.7-dev`
+Latest development build: `0.2.8-dev`
 
-Version 0.2.7-dev updates the userscript metadata description and uses GitHub raw URLs in the README install links.
+Version 0.2.8-dev applies option changes from the dialog OK button and removes the separate Save options button.
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
 
