@@ -1,22 +1,26 @@
 # IITC Smooth User Follow
 
-Small IITC helper plugin to enable smoother user-location following.
+Small IITC helper plugin for testing smoother user-location following.
 
-This first pass does **not** do viewport biasing. It keeps IITC north-up and pans toward the user's current position only after the marker leaves an inner dead zone. It also rate-limits camera moves so GPS marker updates stay separate from map movement.
+This pass does **not** do viewport biasing. It keeps IITC north-up and uses a steady camera loop: location updates set the target, and the map center eases toward that target.
 
 ## What it does
 
-- Wraps `window.plugin.userLocation.onLocationChange()`.
+- Wraps `window.plugin.userLocation.onLocationChange()` when IITC's User Location plugin is available.
 - Lets IITC's `user-location` plugin keep updating the marker, accuracy circle, orientation, and hooks.
+- Uses a small fallback marker for desktop simulation when IITC's User Location plugin is unavailable or not ready.
 - Suppresses the built-in abrupt follow recenter while smooth follow is active.
-- Uses `map.panTo()` instead of `map.setView()` for follow camera movement.
+- Uses a steady camera loop instead of dead-zone catch-up recentering.
+- Location updates set the camera target; the loop eases the map center toward it.
 - Adds a tiny desktop control:
   - `SF` toggles smooth follow.
   - `SIM` starts/stops simulated movement for desktop testing.
 
 ## Requirements
 
-Enable IITC's built-in **User Location** plugin first. This plugin is a helper around that plugin; it does not replace the user marker or browser geolocation watch.
+For real GPS follow behavior, enable IITC's built-in **User Location** plugin.
+
+For desktop simulation only, the plugin can run without IITC User Location. In that case it creates a small fallback simulator marker so you can test camera movement without going for a drive.
 
 ## Build
 
@@ -36,14 +40,22 @@ dist/smooth-user-follow.meta.js
 One easy loop:
 
 ```sh
-npm run build
-python3 -m http.server 8000
+npm run dev
 ```
+
+That runs the build and starts a local web server on port 8000.
 
 Then install from:
 
 ```text
 http://localhost:8000/dist/smooth-user-follow.user.js
+```
+
+The generated `.user.js` and `.meta.js` headers also point to the local dev server:
+
+```text
+@updateURL   http://localhost:8000/dist/smooth-user-follow.meta.js
+@downloadURL http://localhost:8000/dist/smooth-user-follow.user.js
 ```
 
 Tampermonkey may cache aggressively. Bump `VERSION` or append a query string while testing.
@@ -64,7 +76,7 @@ Optional simulator settings:
 ```js
 window.plugin.smoothUserFollow.simulator.start({
   speedMps: 12,
-  intervalMs: 1000,
+  intervalMs: 250,
   segmentLengthMeters: 350,
 });
 ```
@@ -74,14 +86,15 @@ window.plugin.smoothUserFollow.simulator.start({
 ```js
 {
   enabled: true,
-  deadZonePad: 0.15,
-  minPanIntervalMs: 1500,
-  panDurationSeconds: 0.45,
-  panEaseLinearity: 0.25,
+  cameraIntervalMs: 100,
+  cameraSmoothing: 0.22,
+  cameraStopDistanceMeters: 1.5,
+  simulatorSpeedMps: 12,
+  simulatorIntervalMs: 250,
 }
 ```
 
-`deadZonePad: 0.15` matches IITC's current inner 70% viewport threshold. The difference is that this plugin pans smoothly and rate-limits camera movement.
+`cameraSmoothing` controls how much of the remaining distance the camera moves each tick. Larger values catch up faster; smaller values feel heavier and smoother.
 
 ## Future work
 

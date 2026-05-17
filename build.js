@@ -9,6 +9,8 @@ const srcPath = path.join(root, 'src', 'smooth-user-follow.js');
 const distDir = path.join(root, 'dist');
 const outPath = path.join(distDir, 'smooth-user-follow.user.js');
 const metaPath = path.join(distDir, 'smooth-user-follow.meta.js');
+const updateUrl = 'http://localhost:8000/dist/smooth-user-follow.meta.js';
+const downloadUrl = 'http://localhost:8000/dist/smooth-user-follow.user.js';
 
 const buildTime = new Date().toISOString();
 const source = fs.readFileSync(srcPath, 'utf8')
@@ -20,10 +22,10 @@ const metadata = `// ==UserScript==
 // @name           IITC plugin: Smooth User Follow
 // @category       Controls
 // @version        ${version}
-// @namespace      https://github.com/mdiehn/iitc-plugin-smooth-user-follow
-// @updateURL      https://github.com/mdiehn/iitc-plugin-smooth-user-follow/raw/main/dist/smooth-user-follow.meta.js
-// @downloadURL    https://github.com/mdiehn/iitc-plugin-smooth-user-follow/raw/main/dist/smooth-user-follow.user.js
-// @description    Smooth and rate-limit IITC user-location follow movement, with a desktop movement simulator.
+// @namespace      https://github.com/mdiehn/iitc-smooth-user-follow
+// @updateURL      ${updateUrl}
+// @downloadURL    ${downloadUrl}
+// @description    Use steady-camera IITC user-location follow movement, with a desktop movement simulator.
 // @author         Mike Diehn and Frank
 // @match          https://intel.ingress.com/*
 // @match          https://*.ingress.com/intel*

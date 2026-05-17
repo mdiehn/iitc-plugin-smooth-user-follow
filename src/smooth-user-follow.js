@@ -17,14 +17,13 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   plugin.settings = Object.assign(
     {
       enabled: true,
-      // IITC user-location uses getBounds().pad(-0.15), giving an inner 70% dead zone.
-      // Keep that threshold for the first pass; only change the camera movement style.
-      deadZonePad: 0.15,
-      minPanIntervalMs: 1500,
-      panDurationSeconds: 0.45,
-      panEaseLinearity: 0.25,
+      // Steady camera follow: location updates set the target, and a camera
+      // loop eases the map center toward that target. No viewport bias yet.
+      cameraIntervalMs: 100,
+      cameraSmoothing: 0.22,
+      cameraStopDistanceMeters: 1.5,
       simulatorSpeedMps: 12,
-      simulatorIntervalMs: 1000,
+      simulatorIntervalMs: 250,
       simulatorSegmentLengthMeters: 350,
     },
     plugin.settings || {}
@@ -36,13 +35,18 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       wrapped: false,
       originalOnLocationChange: null,
       originalLocate: null,
-      lastPanAt: 0,
       latestLatLng: null,
-      pendingPanTimer: null,
+      cameraTargetLatLng: null,
+      cameraTimer: null,
+      cameraStepping: false,
       control: null,
       followButton: null,
       simulatorButton: null,
       waitingNoticeShown: false,
+      fallbackLayer: null,
+      fallbackMarker: null,
+      fallbackCircle: null,
+      fallbackLatLng: null,
     },
     plugin.state || {}
   );
@@ -74,18 +78,26 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   };
 
   plugin.waitForUserLocation = function () {
-    if (window.plugin.userLocation && typeof window.plugin.userLocation.onLocationChange === 'function') {
+    if (plugin.hasRealUserLocation()) {
       plugin.wrapUserLocation();
       plugin.updateControl();
       return;
     }
 
     if (!plugin.state.waitingNoticeShown) {
-      plugin.warn('Waiting for IITC user-location plugin. Enable User Location for marker/follow support.');
+      plugin.warn('IITC user-location marker is not ready. Simulator will use Smooth User Follow fallback marker.');
       plugin.state.waitingNoticeShown = true;
     }
 
     window.setTimeout(plugin.waitForUserLocation, 1000);
+  };
+
+  plugin.hasUserLocationApi = function () {
+    return !!(window.plugin.userLocation && typeof window.plugin.userLocation.onLocationChange === 'function');
+  };
+
+  plugin.hasRealUserLocation = function () {
+    return !!(plugin.hasUserLocationApi() && window.plugin.userLocation.marker);
   };
 
   plugin.wrapUserLocation = function () {
@@ -112,7 +124,7 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       }
 
       if (plugin.isFollowing()) {
-        plugin.handleLocationForCamera(latlng, { force: false });
+        plugin.updateCameraTarget(latlng);
       }
     };
 
@@ -127,6 +139,12 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
         // keep our visible follow state aligned with IITC's follow flag.
         plugin.state.following = !!userLocation.follow;
         if (wasFollowing && !userLocation.follow) plugin.state.following = false;
+        if (plugin.state.following) {
+          const latlng = plugin.getCurrentUserLatLng();
+          if (latlng) plugin.updateCameraTarget(latlng);
+        } else {
+          plugin.stopCameraLoop();
+        }
         plugin.updateControl();
         return result;
       };
@@ -158,9 +176,10 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
     if (enabled) {
       const latlng = plugin.getCurrentUserLatLng();
-      if (latlng) plugin.handleLocationForCamera(latlng, { force: true });
+      if (latlng) plugin.updateCameraTarget(latlng, { snap: true });
+      plugin.startCameraLoop();
     } else {
-      plugin.clearPendingPan();
+      plugin.stopCameraLoop();
     }
   };
 
@@ -170,65 +189,172 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
   plugin.getCurrentUserLatLng = function () {
     const userLocation = window.plugin.userLocation;
-    const latlng = userLocation?.user?.latlng || plugin.state.latestLatLng;
+    const latlng = userLocation?.user?.latlng || plugin.state.latestLatLng || plugin.state.fallbackLatLng;
 
     if (!latlng) return null;
     if (latlng.lat === 0 && latlng.lng === 0) return null;
     return latlng;
   };
 
-  plugin.handleLocationForCamera = function (latlng, options = {}) {
-    if (!window.map || !latlng) return;
-    if (!options.force && !plugin.isOutsideDeadZone(latlng)) return;
-
-    const now = Date.now();
-    const elapsed = now - plugin.state.lastPanAt;
-
-    if (options.force || elapsed >= plugin.settings.minPanIntervalMs) {
-      plugin.clearPendingPan();
-      plugin.panTo(latlng);
+  plugin.publishLocation = function (lat, lng) {
+    if (plugin.hasRealUserLocation()) {
+      if (!plugin.state.wrapped) plugin.wrapUserLocation();
+      window.plugin.userLocation.onLocationChange(lat, lng);
       return;
     }
 
-    plugin.schedulePendingPan(plugin.settings.minPanIntervalMs - elapsed);
+    plugin.updateFallbackLocation(lat, lng);
   };
 
-  plugin.isOutsideDeadZone = function (latlng) {
-    const pad = Math.max(0, Math.min(0.45, Number(plugin.settings.deadZonePad)));
-    const bounds = window.map.getBounds().pad(-pad);
-    return !bounds.contains(latlng);
+  plugin.ensureFallbackMarker = function () {
+    if (!window.L || !window.map) return false;
+    if (plugin.state.fallbackMarker) return true;
+
+    const latlng = window.map.getCenter();
+    const icon = new L.DivIcon({
+      iconSize: new L.Point(24, 24),
+      iconAnchor: new L.Point(12, 12),
+      className: 'smooth-user-follow-fallback-marker',
+      html: '<div></div>',
+    });
+
+    const marker = new L.Marker(latlng, {
+      icon,
+      zIndexOffset: 300,
+      interactive: false,
+    });
+
+    const circle = new L.Circle(latlng, 40, {
+      stroke: true,
+      color: '#ffce00',
+      opacity: 0.5,
+      fillOpacity: 0.15,
+      fillColor: '#ffce00',
+      weight: 1.5,
+      interactive: false,
+    });
+
+    const layer = new L.LayerGroup([marker, circle]);
+    layer.addTo(window.map);
+
+    if (typeof window.addLayerGroup === 'function') {
+      window.addLayerGroup('Smooth follow simulator location', layer, true);
+    }
+
+    plugin.state.fallbackLayer = layer;
+    plugin.state.fallbackMarker = marker;
+    plugin.state.fallbackCircle = circle;
+    plugin.state.fallbackLatLng = latlng;
+    return true;
   };
 
-  plugin.panTo = function (latlng) {
+  plugin.updateFallbackLocation = function (lat, lng) {
+    if (!plugin.ensureFallbackMarker()) return;
+
+    const latlng = new L.LatLng(lat, lng);
+    plugin.state.latestLatLng = latlng;
+    plugin.state.fallbackLatLng = latlng;
+    plugin.state.fallbackMarker.setLatLng(latlng);
+    plugin.state.fallbackCircle.setLatLng(latlng);
+
+    if (plugin.isFollowing()) {
+      plugin.updateCameraTarget(latlng);
+    }
+  };
+
+  plugin.updateCameraTarget = function (latlng, options = {}) {
     if (!window.map || !latlng) return;
 
-    plugin.state.lastPanAt = Date.now();
+    plugin.state.cameraTargetLatLng = latlng;
 
-    window.map.panTo(latlng, {
-      animate: true,
-      duration: Number(plugin.settings.panDurationSeconds),
-      easeLinearity: Number(plugin.settings.panEaseLinearity),
-    });
+    if (options.snap) {
+      window.map.panTo(latlng, { animate: false });
+      return;
+    }
+
+    plugin.startCameraLoop();
   };
 
-  plugin.schedulePendingPan = function (delayMs) {
-    if (plugin.state.pendingPanTimer) return;
+  plugin.startCameraLoop = function () {
+    if (plugin.state.cameraTimer || !window.map) return;
 
-    plugin.state.pendingPanTimer = window.setTimeout(() => {
-      plugin.state.pendingPanTimer = null;
-
-      if (!plugin.isFollowing()) return;
-      const latlng = plugin.state.latestLatLng;
-      if (!latlng || !plugin.isOutsideDeadZone(latlng)) return;
-
-      plugin.panTo(latlng);
-    }, Math.max(100, delayMs));
+    plugin.state.cameraTimer = window.setInterval(
+      plugin.stepCameraTowardTarget,
+      plugin.getCameraIntervalMs()
+    );
   };
 
-  plugin.clearPendingPan = function () {
-    if (!plugin.state.pendingPanTimer) return;
-    window.clearTimeout(plugin.state.pendingPanTimer);
-    plugin.state.pendingPanTimer = null;
+  plugin.stopCameraLoop = function () {
+    if (!plugin.state.cameraTimer) return;
+
+    window.clearInterval(plugin.state.cameraTimer);
+    plugin.state.cameraTimer = null;
+    plugin.state.cameraStepping = false;
+  };
+
+  plugin.getCameraIntervalMs = function () {
+    const interval = Number(plugin.settings.cameraIntervalMs);
+    if (!Number.isFinite(interval)) return 100;
+    return Math.max(25, interval);
+  };
+
+  plugin.getCameraSmoothing = function () {
+    const smoothing = Number(plugin.settings.cameraSmoothing);
+    if (!Number.isFinite(smoothing)) return 0.22;
+    return Math.max(0.01, Math.min(1, smoothing));
+  };
+
+  plugin.getCameraStopDistanceMeters = function () {
+    const distance = Number(plugin.settings.cameraStopDistanceMeters);
+    if (!Number.isFinite(distance)) return 1.5;
+    return Math.max(0, distance);
+  };
+
+  plugin.stepCameraTowardTarget = function () {
+    if (plugin.state.cameraStepping) return;
+    if (!plugin.isFollowing()) {
+      plugin.stopCameraLoop();
+      return;
+    }
+
+    const target = plugin.state.cameraTargetLatLng || plugin.state.latestLatLng;
+    if (!window.map || !target) return;
+
+    const current = window.map.getCenter();
+    const remainingMeters = plugin.distanceMeters(current, target);
+    if (remainingMeters <= plugin.getCameraStopDistanceMeters()) return;
+
+    plugin.state.cameraStepping = true;
+
+    try {
+      const zoom = window.map.getZoom();
+      const currentPoint = window.map.project(current, zoom);
+      const targetPoint = window.map.project(target, zoom);
+      const nextPoint = currentPoint.add(
+        targetPoint.subtract(currentPoint).multiplyBy(plugin.getCameraSmoothing())
+      );
+      const nextCenter = window.map.unproject(nextPoint, zoom);
+
+      window.map.panTo(nextCenter, { animate: false });
+    } finally {
+      plugin.state.cameraStepping = false;
+    }
+  };
+
+  plugin.distanceMeters = function (a, b) {
+    if (!a || !b) return Infinity;
+    if (window.map && typeof window.map.distance === 'function') return window.map.distance(a, b);
+    if (typeof a.distanceTo === 'function') return a.distanceTo(b);
+
+    const radiusMeters = 6371000;
+    const lat1 = (a.lat * Math.PI) / 180;
+    const lat2 = (b.lat * Math.PI) / 180;
+    const deltaLat = ((b.lat - a.lat) * Math.PI) / 180;
+    const deltaLng = ((b.lng - a.lng) * Math.PI) / 180;
+    const sinLat = Math.sin(deltaLat / 2);
+    const sinLng = Math.sin(deltaLng / 2);
+    const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng;
+    return radiusMeters * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
   };
 
   plugin.injectStyles = function () {
@@ -259,6 +385,15 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       }
       .smooth-user-follow-dialog code {
         user-select: text;
+      }
+      .smooth-user-follow-fallback-marker div {
+        width: 18px;
+        height: 18px;
+        margin: 3px;
+        border-radius: 50%;
+        background: #ffce00;
+        border: 2px solid #111;
+        box-shadow: 0 0 0 2px rgba(255, 206, 0, 0.35);
       }
     `;
     document.head.appendChild(style);
@@ -325,11 +460,12 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   plugin.showDialog = function () {
     const html = `
       <div class="smooth-user-follow-dialog">
-        <p>First-pass smooth follow. No viewport biasing yet.</p>
-        <label>Dead-zone pad: <input id="suf-dead-zone-pad" type="number" step="0.01" min="0" max="0.45" value="${plugin.settings.deadZonePad}"></label>
-        <label>Min pan interval ms: <input id="suf-min-pan-interval" type="number" step="100" min="0" value="${plugin.settings.minPanIntervalMs}"></label>
-        <label>Pan duration seconds: <input id="suf-pan-duration" type="number" step="0.05" min="0" value="${plugin.settings.panDurationSeconds}"></label>
+        <p>Steady camera follow. No viewport biasing yet.</p>
+        <label>Camera interval ms: <input id="suf-camera-interval" type="number" step="25" min="25" value="${plugin.settings.cameraIntervalMs}"></label>
+        <label>Camera smoothing: <input id="suf-camera-smoothing" type="number" step="0.01" min="0.01" max="1" value="${plugin.settings.cameraSmoothing}"></label>
+        <label>Stop distance meters: <input id="suf-camera-stop-distance" type="number" step="0.5" min="0" value="${plugin.settings.cameraStopDistanceMeters}"></label>
         <label>Simulator speed m/s: <input id="suf-sim-speed" type="number" step="1" min="0" value="${plugin.settings.simulatorSpeedMps}"></label>
+        <label>Simulator interval ms: <input id="suf-sim-interval" type="number" step="50" min="50" value="${plugin.settings.simulatorIntervalMs}"></label>
         <p>Console helpers:</p>
         <p><code>window.plugin.smoothUserFollow.simulator.start()</code></p>
         <p><code>window.plugin.smoothUserFollow.setFollowing(true)</code></p>
@@ -350,10 +486,30 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     }
 
     $('#suf-save-settings').on('click', () => {
-      plugin.settings.deadZonePad = Number($('#suf-dead-zone-pad').val());
-      plugin.settings.minPanIntervalMs = Number($('#suf-min-pan-interval').val());
-      plugin.settings.panDurationSeconds = Number($('#suf-pan-duration').val());
+      const oldCameraIntervalMs = plugin.getCameraIntervalMs();
+      const oldSimulatorIntervalMs = Number(plugin.simulator.options?.intervalMs || plugin.settings.simulatorIntervalMs);
+
+      plugin.settings.cameraIntervalMs = Number($('#suf-camera-interval').val());
+      plugin.settings.cameraSmoothing = Number($('#suf-camera-smoothing').val());
+      plugin.settings.cameraStopDistanceMeters = Number($('#suf-camera-stop-distance').val());
       plugin.settings.simulatorSpeedMps = Number($('#suf-sim-speed').val());
+      plugin.settings.simulatorIntervalMs = Number($('#suf-sim-interval').val());
+
+      if (plugin.state.cameraTimer && plugin.getCameraIntervalMs() !== oldCameraIntervalMs) {
+        plugin.stopCameraLoop();
+        plugin.startCameraLoop();
+      }
+
+      if (plugin.simulator.options) {
+        plugin.simulator.options.speedMps = plugin.settings.simulatorSpeedMps;
+        plugin.simulator.options.intervalMs = plugin.settings.simulatorIntervalMs;
+      }
+
+      if (plugin.simulator.running && Number(plugin.settings.simulatorIntervalMs) !== oldSimulatorIntervalMs) {
+        if (plugin.simulator.timer) window.clearInterval(plugin.simulator.timer);
+        plugin.simulator.timer = window.setInterval(plugin.simulator.step, Number(plugin.settings.simulatorIntervalMs));
+      }
+
       plugin.updateControl();
     });
   };
@@ -364,8 +520,10 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   };
 
   plugin.simulator.start = function (options = {}) {
-    if (!window.plugin.userLocation || typeof window.plugin.userLocation.onLocationChange !== 'function') {
-      plugin.warn('Cannot start simulator until the IITC user-location plugin is available.');
+    if (plugin.hasRealUserLocation()) {
+      if (!plugin.state.wrapped) plugin.wrapUserLocation();
+    } else if (!plugin.ensureFallbackMarker()) {
+      plugin.warn('Cannot start simulator until the IITC map is available.');
       return false;
     }
 
@@ -432,7 +590,7 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       sim.bearing = (sim.bearing + 90) % 360;
     }
 
-    window.plugin.userLocation.onLocationChange(sim.position.lat, sim.position.lng);
+    plugin.publishLocation(sim.position.lat, sim.position.lng);
   };
 
   plugin.destinationPoint = function (latlng, bearingDeg, distanceMeters) {
