@@ -925,13 +925,15 @@ window.plugin.followMode = window.plugin.followMode || {};
     style.id = 'follow-mode-style';
     style.textContent = `
       .follow-mode-control a {
-        min-width: 34px;
-        height: 28px;
-        line-height: 28px;
-        padding: 0 4px;
+        box-sizing: border-box;
+        width: 26px;
+        min-width: 26px;
+        height: 26px;
+        line-height: 26px;
+        padding: 0;
         text-align: center;
         font-weight: bold;
-        font-size: 10px;
+        font-size: 11px;
         text-decoration: none;
       }
       .follow-mode-control a.fm-active {

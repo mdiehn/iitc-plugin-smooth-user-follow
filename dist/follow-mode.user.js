@@ -2,11 +2,11 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode
 // @category       Controls
-// @version        0.2.3-dev
+// @version        0.2.5-dev.20260517111502
 // @namespace      https://github.com/mdiehn/iitc-follow-mode
-// @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js
-// @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js
-// @description    Use steady-camera IITC user-location follow movement, with a desktop movement simulator.
+// @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.meta.js
+// @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.user.js
+// @description    Use smooth heading-up IITC user-location follow movement.
 // @author         Mike Diehn and Frank
 // @match          https://intel.ingress.com/*
 // @match          https://*.ingress.com/intel*
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.3-dev';
-  plugin.buildTime = '2026-05-17T11:00:52.099Z';
+  plugin.version = '0.2.5-dev.20260517111502';
+  plugin.buildTime = '2026-05-17T11:15:02.490Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -942,13 +942,15 @@ window.plugin.followMode = window.plugin.followMode || {};
     style.id = 'follow-mode-style';
     style.textContent = `
       .follow-mode-control a {
-        min-width: 34px;
-        height: 28px;
-        line-height: 28px;
-        padding: 0 4px;
+        box-sizing: border-box;
+        width: 26px;
+        min-width: 26px;
+        height: 26px;
+        line-height: 26px;
+        padding: 0;
         text-align: center;
         font-weight: bold;
-        font-size: 10px;
+        font-size: 11px;
         text-decoration: none;
       }
       .follow-mode-control a.fm-active {

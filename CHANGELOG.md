@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.5-dev
+
+- Tighten the mini-control button width for the single-letter `F`, `R`, `B`, and `=` labels.
+- Remove the leftover extra horizontal padding from the earlier longer labels.
+
+## 0.2.4-dev
+
+- Add branch-aware build URLs for generated `@updateURL` and `@downloadURL` metadata.
+- Stamp generated `-dev` userscript versions with a build timestamp.
+- Generate `follow-mode.meta.js` from the userscript metadata block.
+- Update README install and metadata links during build.
+- Add `npm run check` to build and syntax-check the generated userscript.
+
 ## 0.2.3-dev
 
 - Update the README top section to match the Portal Route style.
