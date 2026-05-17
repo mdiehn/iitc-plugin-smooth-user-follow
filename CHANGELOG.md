@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.10-dev
+
+- Update repository/package naming and generated URLs for `mdiehn/iitc-plugin-follow-mode`.
+- Keep dist filenames as `follow-mode.user.js` and `follow-mode.meta.js`.
+
+## 0.2.9-dev
+
+- Change README install and metadata links to GitHub raw URLs matching the Portal Route install style.
+- Keep generated userscript update/download metadata branch-aware.
+
+## 0.2.8-dev
+
+- Apply Follow Mode option changes from the dialog **OK** button.
+- Remove the separate **Save options** button from the Options dialog.
+
 ## 0.2.7-dev
 
 - Update the userscript metadata description wording.

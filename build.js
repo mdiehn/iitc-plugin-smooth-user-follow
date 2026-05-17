@@ -12,7 +12,7 @@ const distDir = path.join(root, 'dist');
 const outPath = path.join(distDir, 'follow-mode.user.js');
 const metaPath = path.join(distDir, 'follow-mode.meta.js');
 
-const repo = 'mdiehn/iitc-follow-mode';
+const repo = 'mdiehn/iitc-plugin-follow-mode';
 const baseVersion = fs.readFileSync(versionFile, 'utf8').trim();
 const buildTime = new Date();
 const branch = getCurrentBranch();
@@ -57,8 +57,8 @@ function getCurrentBranch() {
 function updateReadmeInstallLinks() {
   if (!fs.existsSync(readmeFile)) return;
 
-  const readmeInstallUrl = `https://raw.githubusercontent.com/${repo}/refs/heads/${branch}/dist/follow-mode.user.js`;
-  const readmeMetaUrl = `https://raw.githubusercontent.com/${repo}/refs/heads/${branch}/dist/follow-mode.meta.js`;
+  const readmeInstallUrl = `https://github.com/${repo}/raw/refs/heads/${branch}/dist/follow-mode.user.js`;
+  const readmeMetaUrl = `https://github.com/${repo}/raw/refs/heads/${branch}/dist/follow-mode.meta.js`;
   const readme = fs.readFileSync(readmeFile, 'utf8');
   const updated = readme
     .replace(

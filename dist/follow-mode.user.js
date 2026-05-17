@@ -2,10 +2,10 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode
 // @category       Controls
-// @version        0.2.7-dev.20260517112807
-// @namespace      https://github.com/mdiehn/iitc-follow-mode
-// @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.meta.js
-// @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.user.js
+// @version        0.2.10-dev.20260517114338
+// @namespace      https://github.com/mdiehn/iitc-plugin-follow-mode
+// @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.meta.js
+// @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.user.js
 // @description    Use smoothed, heading-up, IITC user-location follow movement.
 // @author         Mike Diehn and Frank
 // @match          https://intel.ingress.com/*
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.7-dev.20260517112807';
-  plugin.buildTime = '2026-05-17T11:28:07.734Z';
+  plugin.version = '0.2.10-dev.20260517114338';
+  plugin.buildTime = '2026-05-17T11:43:38.406Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -1104,8 +1104,6 @@ window.plugin.followMode = window.plugin.followMode || {};
             <p><code>window.plugin.followMode.simulator.start()</code></p>
           </fieldset>
         </div>
-
-        <button id="fm-save-settings" type="button">Save options</button>
       </div>
     `;
 
@@ -1115,6 +1113,12 @@ window.plugin.followMode = window.plugin.followMode || {};
         html,
         width: 430,
         id: 'follow-mode-options',
+        buttons: {
+          OK: function () {
+            plugin.saveSettingsFromDialog();
+            $(this).dialog('close');
+          },
+        },
       });
     } else {
       alert('Follow Mode options are available from window.plugin.followMode.settings');
@@ -1133,9 +1137,6 @@ window.plugin.followMode = window.plugin.followMode || {};
       $('#fm-sim-toggle').text(plugin.simulator.running ? 'Stop simulator' : 'Start simulator');
     });
 
-    $('#fm-save-settings').on('click', () => {
-      plugin.saveSettingsFromDialog();
-    });
   };
 
   plugin.saveSettingsFromDialog = function () {
