@@ -2,7 +2,7 @@
 
 Small IITC helper plugin for testing smoother user-location following.
 
-This pass adds experimental viewport bias and heading-up map rotation on top of the steady camera loop. Both can be turned off from the settings dialog.
+This pass adds experimental viewport bias, heading-up map rotation, simulator auto-stop on real GPS, and optional device-orientation heading for stationary rotation. The risky pieces can be turned off from the settings dialog.
 
 ## What it does
 
@@ -14,6 +14,9 @@ This pass adds experimental viewport bias and heading-up map rotation on top of 
 - Location updates set the camera target; the loop eases the map center toward it.
 - Can bias the user marker lower in the viewport so more map is visible ahead.
 - Can visually rotate the Leaflet map pane for heading-up follow mode.
+- Uses GPS/geolocation heading when the browser provides it.
+- Can use device orientation/compass heading while stationary or moving slowly.
+- Auto-stops the simulator when real GPS/location fixes arrive.
 - Adds a tiny desktop control:
   - `SF` toggles smooth follow.
   - `SIM` starts/stops simulated movement for desktop testing.
@@ -21,9 +24,13 @@ This pass adds experimental viewport bias and heading-up map rotation on top of 
 
 ## Requirements
 
-For real GPS follow behavior, enable IITC's built-in **User Location** plugin.
+For real GPS follow behavior, enable IITC's built-in **User Location** plugin. Smooth User Follow also starts a supplemental browser geolocation watch while follow mode is enabled, so it can capture speed and heading metadata that IITC may not expose through `onLocationChange()`.
 
 For desktop simulation only, the plugin can run without IITC User Location. In that case it creates a small fallback simulator marker so you can test camera movement without going for a drive.
+
+## Heading sources
+
+Browser geolocation heading is direction of travel. It usually does not change when you rotate the phone while standing still. Device orientation heading is used for stationary/slow heading-up rotation when available and permitted.
 
 ## Experimental heading-up note
 
@@ -110,6 +117,10 @@ window.plugin.smoothUserFollow.simulator.start({
 - Consider route-aware lookahead from Portal Route later.
 - Consider whether this should remain separate or be folded into IITC's `user-location.js`.
 
+
+## 0.1.6-dev notes
+
+The simulator still emits ordinary point updates, but real browser/IITC location fixes now stop it automatically by default. Smooth follow can use geolocation speed/heading when available, and device orientation can drive heading-up rotation while stationary.
 
 ## 0.1.4-dev notes
 

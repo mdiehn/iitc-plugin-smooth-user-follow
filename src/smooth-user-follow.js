@@ -28,6 +28,10 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       viewportBiasY: 0.70,
       headingIndicatorEnabled: true,
       headingUpEnabled: true,
+      autoStopSimulatorOnRealGps: true,
+      useGeolocationHeading: true,
+      deviceOrientationHeadingEnabled: true,
+      stationaryOrientationMaxSpeedMps: 1,
       rotationSmoothing: 0.18,
       rotationMinSpeedMps: 2,
       simulatorSpeedMps: 12,
@@ -42,7 +46,11 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       following: false,
       wrapped: false,
       originalOnLocationChange: null,
+      originalOnBrowserLocationSuccess: null,
+      originalOnOrientationChange: null,
       originalLocate: null,
+      pendingLocationMetadata: null,
+      publishingSyntheticLocation: false,
       latestLatLng: null,
       previousFix: null,
       latestFix: null,
@@ -53,6 +61,12 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       mapRotationDeg: 0,
       headingMarker: null,
       headingBearingDeg: null,
+      deviceOrientationBearingDeg: null,
+      deviceOrientationTimestampMs: null,
+      supplementalGeolocationWatchId: null,
+      supplementalGeolocationActive: false,
+      deviceOrientationListenerStarted: false,
+      deviceOrientationPermissionRequested: false,
       control: null,
       followButton: null,
       simulatorButton: null,
@@ -114,6 +128,61 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     return !!(plugin.hasUserLocationApi() && window.plugin.userLocation.marker);
   };
 
+  plugin.maybeStartDeviceOrientation = async function () {
+    if (!plugin.settings.deviceOrientationHeadingEnabled) return false;
+    if (plugin.state.deviceOrientationListenerStarted) return true;
+    if (!window.DeviceOrientationEvent) return false;
+
+    if (typeof DeviceOrientationEvent.requestPermission === 'function' && !plugin.state.deviceOrientationPermissionRequested) {
+      let permission;
+      try {
+        permission = await DeviceOrientationEvent.requestPermission(true);
+      } catch (error) {
+        plugin.state.deviceOrientationPermissionRequested = false;
+        throw error;
+      }
+
+      plugin.state.deviceOrientationPermissionRequested = true;
+      if (permission !== 'granted') {
+        plugin.warn('Device orientation permission was not granted.');
+        return false;
+      }
+    }
+
+    const eventType = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(eventType, plugin.onDeviceOrientationEvent, true);
+    plugin.state.deviceOrientationListenerStarted = true;
+    return true;
+  };
+
+  plugin.onDeviceOrientationEvent = function (event) {
+    const heading = plugin.extractDeviceOrientationHeading(event);
+    if (heading === null) return;
+
+    plugin.recordOrientationHeading(heading, {
+      source: 'device-orientation-event',
+      timestampMs: Date.now(),
+    });
+  };
+
+  plugin.extractDeviceOrientationHeading = function (event) {
+    if (!event) return null;
+
+    const { type, alpha, webkitCompassHeading, absolute } = event;
+    let heading = null;
+
+    if (type === 'deviceorientationabsolute' && alpha !== null && alpha !== undefined) {
+      heading = 360 - Number(alpha);
+    } else if (webkitCompassHeading !== undefined && webkitCompassHeading !== null) {
+      heading = Number(webkitCompassHeading);
+    } else if (absolute === true && alpha !== null && alpha !== undefined) {
+      heading = 360 - Number(alpha);
+    }
+
+    if (!Number.isFinite(heading)) return null;
+    return plugin.normalizeBearing(heading);
+  };
+
   plugin.wrapUserLocation = function () {
     const userLocation = window.plugin.userLocation;
 
@@ -124,6 +193,12 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
     userLocation.onLocationChange = function smoothUserFollowOnLocationChange(lat, lng) {
       const latlng = new L.LatLng(lat, lng);
+      const metadata = plugin.consumePendingLocationMetadata(lat, lng) || {};
+      const isSynthetic = metadata.source === 'simulator' || plugin.state.publishingSyntheticLocation;
+
+      if (plugin.settings.autoStopSimulatorOnRealGps && plugin.simulator.running && !isSynthetic) {
+        plugin.simulator.stop({ reason: 'real-location' });
+      }
 
       const originalFollow = !!userLocation.follow;
       const shouldOwnCamera = plugin.shouldOwnFollowCamera(originalFollow);
@@ -136,8 +211,27 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
         if (shouldOwnCamera) userLocation.follow = originalFollow;
       }
 
-      plugin.recordLocationFix(latlng);
+      plugin.recordLocationFix(latlng, metadata);
     };
+
+    if (typeof userLocation.onBrowserLocationSuccess === 'function') {
+      plugin.state.originalOnBrowserLocationSuccess = userLocation.onBrowserLocationSuccess;
+      userLocation.onBrowserLocationSuccess = function smoothUserFollowBrowserLocationSuccess(position) {
+        return plugin.withPendingLocationMetadata(
+          plugin.getMetadataFromGeolocationPosition(position),
+          () => plugin.state.originalOnBrowserLocationSuccess.apply(this, arguments)
+        );
+      };
+    }
+
+    if (typeof userLocation.onOrientationChange === 'function') {
+      plugin.state.originalOnOrientationChange = userLocation.onOrientationChange;
+      userLocation.onOrientationChange = function smoothUserFollowOrientationChange(direction) {
+        const result = plugin.state.originalOnOrientationChange.apply(this, arguments);
+        plugin.recordOrientationHeading(direction, { source: 'iitc-user-location' });
+        return result;
+      };
+    }
 
     plugin.state.originalLocate = userLocation.locate;
 
@@ -186,6 +280,8 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     plugin.updateControl();
 
     if (enabled) {
+      plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
+      plugin.startSupplementalGeolocationWatch();
       const latlng = plugin.getCurrentUserLatLng();
       if (latlng) {
         plugin.recordLocationFix(latlng, { timestampMs: Date.now() });
@@ -194,6 +290,7 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       plugin.startCameraLoop();
     } else {
       plugin.stopCameraLoop();
+      plugin.stopSupplementalGeolocationWatch();
       plugin.resetMapOrientation();
     }
   };
@@ -211,14 +308,129 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     return latlng;
   };
 
+  plugin.withPendingLocationMetadata = function (metadata, callback) {
+    const previousMetadata = plugin.state.pendingLocationMetadata;
+    plugin.state.pendingLocationMetadata = Object.assign({}, metadata || {});
+
+    try {
+      return callback();
+    } finally {
+      plugin.state.pendingLocationMetadata = previousMetadata;
+    }
+  };
+
+  plugin.consumePendingLocationMetadata = function (lat, lng) {
+    const metadata = plugin.state.pendingLocationMetadata;
+    plugin.state.pendingLocationMetadata = null;
+
+    if (!metadata) return null;
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return metadata;
+
+    if (Number.isFinite(Number(metadata.lat)) && Number.isFinite(Number(metadata.lng))) {
+      const input = new L.LatLng(Number(lat), Number(lng));
+      const pending = new L.LatLng(Number(metadata.lat), Number(metadata.lng));
+      if (plugin.distanceMeters(input, pending) > 5) return null;
+    }
+
+    return metadata;
+  };
+
+  plugin.getMetadataFromGeolocationPosition = function (position) {
+    const coords = position?.coords || {};
+    const metadata = {
+      source: 'browser-geolocation',
+      timestampMs: Number(position?.timestamp) || Date.now(),
+      lat: Number(coords.latitude),
+      lng: Number(coords.longitude),
+    };
+
+    if (Number.isFinite(Number(coords.accuracy))) metadata.accuracyMeters = Number(coords.accuracy);
+    if (Number.isFinite(Number(coords.speed))) metadata.speedMps = Math.max(0, Number(coords.speed));
+    if (plugin.settings.useGeolocationHeading && Number.isFinite(Number(coords.heading))) {
+      metadata.bearingDeg = plugin.normalizeBearing(Number(coords.heading));
+      metadata.headingSource = 'geolocation';
+    }
+
+    return metadata;
+  };
+
+  plugin.startSupplementalGeolocationWatch = function () {
+    if (plugin.state.supplementalGeolocationActive) return true;
+    if (!navigator?.geolocation?.watchPosition) return false;
+
+    try {
+      plugin.state.supplementalGeolocationWatchId = navigator.geolocation.watchPosition(
+        plugin.onSupplementalGeolocationSuccess,
+        plugin.onSupplementalGeolocationError,
+        {
+          enableHighAccuracy: true,
+          timeout: 6000,
+          maximumAge: 1000,
+        }
+      );
+      plugin.state.supplementalGeolocationActive = true;
+      return true;
+    } catch (error) {
+      plugin.warn('Could not start supplemental geolocation watch:', error);
+      return false;
+    }
+  };
+
+  plugin.onSupplementalGeolocationSuccess = function (position) {
+    const metadata = plugin.getMetadataFromGeolocationPosition(position);
+    metadata.source = 'supplemental-geolocation';
+
+    if (!Number.isFinite(metadata.lat) || !Number.isFinite(metadata.lng)) return;
+
+    if (plugin.settings.autoStopSimulatorOnRealGps && plugin.simulator.running) {
+      plugin.simulator.stop({ reason: 'real-location' });
+    }
+
+    const latlng = new L.LatLng(metadata.lat, metadata.lng);
+
+    if (plugin.hasRealUserLocation()) {
+      plugin.recordLocationFix(latlng, metadata);
+    } else {
+      plugin.updateFallbackLocation(metadata.lat, metadata.lng, metadata);
+    }
+  };
+
+  plugin.onSupplementalGeolocationError = function (error) {
+    plugin.warn('Supplemental geolocation error:', error);
+  };
+
+  plugin.stopSupplementalGeolocationWatch = function () {
+    if (!plugin.state.supplementalGeolocationActive) return;
+
+    if (navigator?.geolocation?.clearWatch && plugin.state.supplementalGeolocationWatchId !== null) {
+      navigator.geolocation.clearWatch(plugin.state.supplementalGeolocationWatchId);
+    }
+
+    plugin.state.supplementalGeolocationWatchId = null;
+    plugin.state.supplementalGeolocationActive = false;
+  };
+
   plugin.publishLocation = function (lat, lng, metadata = {}) {
+    const enrichedMetadata = Object.assign({ source: 'simulator' }, metadata, {
+      lat: Number(lat),
+      lng: Number(lng),
+    });
+
     if (plugin.hasRealUserLocation()) {
       if (!plugin.state.wrapped) plugin.wrapUserLocation();
-      window.plugin.userLocation.onLocationChange(lat, lng);
+
+      plugin.state.publishingSyntheticLocation = true;
+      try {
+        plugin.withPendingLocationMetadata(enrichedMetadata, () => {
+          window.plugin.userLocation.onLocationChange(lat, lng);
+        });
+      } finally {
+        plugin.state.publishingSyntheticLocation = false;
+      }
       return;
     }
 
-    plugin.updateFallbackLocation(lat, lng, metadata);
+    plugin.updateFallbackLocation(lat, lng, enrichedMetadata);
   };
 
   plugin.ensureFallbackMarker = function () {
@@ -278,44 +490,119 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
     const timestampMs = Number(metadata.timestampMs || Date.now());
     const previousFix = plugin.state.latestFix;
+    const hasExplicitSpeed = Number.isFinite(Number(metadata.speedMps));
+    const hasExplicitBearing = plugin.settings.useGeolocationHeading && Number.isFinite(Number(metadata.bearingDeg));
     const fix = {
       latlng,
       timestampMs,
-      speedMps: Number.isFinite(Number(metadata.speedMps)) ? Number(metadata.speedMps) : null,
-      bearingDeg: Number.isFinite(Number(metadata.bearingDeg)) ? plugin.normalizeBearing(Number(metadata.bearingDeg)) : null,
+      source: metadata.source || 'unknown',
+      accuracyMeters: Number.isFinite(Number(metadata.accuracyMeters)) ? Number(metadata.accuracyMeters) : null,
+      speedMps: hasExplicitSpeed ? Math.max(0, Number(metadata.speedMps)) : null,
+      bearingDeg: hasExplicitBearing ? plugin.normalizeBearing(Number(metadata.bearingDeg)) : null,
+      headingSource: hasExplicitBearing ? metadata.headingSource || 'metadata' : null,
     };
+
+    let distanceMeters = null;
 
     if (previousFix?.latlng && previousFix?.timestampMs && timestampMs > previousFix.timestampMs) {
       const elapsedSeconds = Math.max(0.001, (timestampMs - previousFix.timestampMs) / 1000);
-      const distanceMeters = plugin.distanceMeters(previousFix.latlng, latlng);
+      distanceMeters = plugin.distanceMeters(previousFix.latlng, latlng);
 
-      if (fix.speedMps === null && distanceMeters >= 0.5) {
-        fix.speedMps = distanceMeters / elapsedSeconds;
+      if (fix.speedMps === null) {
+        fix.speedMps = distanceMeters >= 0.5 ? distanceMeters / elapsedSeconds : 0;
       }
 
       if (fix.bearingDeg === null && distanceMeters >= 0.5) {
         fix.bearingDeg = plugin.bearingDegrees(previousFix.latlng, latlng);
+        fix.headingSource = 'movement';
       }
     }
 
-    if (fix.speedMps === null) fix.speedMps = previousFix?.speedMps || 0;
-    if (fix.bearingDeg === null) fix.bearingDeg = previousFix?.bearingDeg ?? plugin.state.headingBearingDeg;
+    if (fix.speedMps === null) fix.speedMps = 0;
+
+    if (fix.bearingDeg === null && previousFix?.bearingDeg !== null && previousFix?.bearingDeg !== undefined && fix.speedMps > 0.2) {
+      fix.bearingDeg = previousFix.bearingDeg;
+      fix.headingSource = previousFix.headingSource || 'previous';
+    }
 
     plugin.state.previousFix = previousFix;
     plugin.state.latestFix = fix;
     plugin.state.latestLatLng = latlng;
 
-    if (fix.bearingDeg !== null && Number.isFinite(fix.bearingDeg)) {
-      plugin.state.headingBearingDeg = plugin.normalizeBearing(fix.bearingDeg);
-      plugin.updateHeadingIndicator(latlng, plugin.state.headingBearingDeg);
-    } else {
-      plugin.updateHeadingIndicator(latlng, null);
-    }
+    const effectiveHeading = plugin.getEffectiveHeadingDeg(fix);
+    plugin.state.headingBearingDeg = effectiveHeading;
+    plugin.updateHeadingIndicator(latlng, effectiveHeading);
 
     if (plugin.isFollowing()) {
       plugin.updateCameraTarget(plugin.getPredictedLatLng(Date.now()));
       plugin.startCameraLoop();
     }
+  };
+
+  plugin.recordOrientationHeading = function (direction, metadata = {}) {
+    if (!plugin.settings.deviceOrientationHeadingEnabled) return;
+
+    const numericDirection = Number(direction);
+    if (!Number.isFinite(numericDirection)) {
+      plugin.state.deviceOrientationBearingDeg = null;
+      plugin.state.deviceOrientationTimestampMs = null;
+      return;
+    }
+
+    plugin.state.deviceOrientationBearingDeg = plugin.normalizeBearing(numericDirection);
+    plugin.state.deviceOrientationTimestampMs = Number(metadata.timestampMs || Date.now());
+
+    const latlng = plugin.getCurrentUserLatLng();
+    const effectiveHeading = plugin.getEffectiveHeadingDeg(plugin.state.latestFix);
+    plugin.state.headingBearingDeg = effectiveHeading;
+    if (latlng) plugin.updateHeadingIndicator(latlng, effectiveHeading);
+
+    if (plugin.isFollowing()) plugin.startCameraLoop();
+  };
+
+  plugin.getStationaryOrientationMaxSpeedMps = function () {
+    const speed = Number(plugin.settings.stationaryOrientationMaxSpeedMps);
+    if (!Number.isFinite(speed)) return 1;
+    return Math.max(0, speed);
+  };
+
+  plugin.getEffectiveHeadingDeg = function (fix = plugin.state.latestFix) {
+    const movementBearing = Number(fix?.bearingDeg);
+    const movementSpeedMps = Number(fix?.speedMps || 0);
+    const deviceBearing = Number(plugin.state.deviceOrientationBearingDeg);
+    const hasDeviceBearing = plugin.settings.deviceOrientationHeadingEnabled && Number.isFinite(deviceBearing);
+    const hasMovementBearing = Number.isFinite(movementBearing);
+
+    if (hasDeviceBearing && (!hasMovementBearing || movementSpeedMps <= plugin.getStationaryOrientationMaxSpeedMps())) {
+      return plugin.normalizeBearing(deviceBearing);
+    }
+
+    if (hasMovementBearing) return plugin.normalizeBearing(movementBearing);
+    if (hasDeviceBearing) return plugin.normalizeBearing(deviceBearing);
+    return null;
+  };
+
+  plugin.getRotationHeadingDeg = function () {
+    if (!plugin.settings.headingUpEnabled || !plugin.isFollowing()) return null;
+
+    const fix = plugin.state.latestFix;
+    const movementBearing = Number(fix?.bearingDeg);
+    const movementSpeedMps = Number(fix?.speedMps || 0);
+    const deviceBearing = Number(plugin.state.deviceOrientationBearingDeg);
+
+    if (
+      plugin.settings.deviceOrientationHeadingEnabled &&
+      Number.isFinite(deviceBearing) &&
+      (!Number.isFinite(movementBearing) || movementSpeedMps <= plugin.getStationaryOrientationMaxSpeedMps())
+    ) {
+      return plugin.normalizeBearing(deviceBearing);
+    }
+
+    if (Number.isFinite(movementBearing) && movementSpeedMps >= plugin.getRotationMinSpeedMps()) {
+      return plugin.normalizeBearing(movementBearing);
+    }
+
+    return null;
   };
 
   plugin.updateCameraTarget = function (latlng, options = {}) {
@@ -476,12 +763,9 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
   plugin.getDesiredMapRotationDeg = function () {
     if (!plugin.settings.headingUpEnabled || !plugin.isFollowing()) return 0;
 
-    const fix = plugin.state.latestFix;
-    const speedMps = Number(fix?.speedMps || 0);
-    const bearingDeg = Number(fix?.bearingDeg ?? plugin.state.headingBearingDeg);
-
-    if (!Number.isFinite(bearingDeg) || speedMps < plugin.getRotationMinSpeedMps()) return plugin.getMapRotationDeg();
-    return plugin.normalizeSignedBearing(-bearingDeg);
+    const headingDeg = plugin.getRotationHeadingDeg();
+    if (!Number.isFinite(Number(headingDeg))) return plugin.getMapRotationDeg();
+    return plugin.normalizeSignedBearing(-headingDeg);
   };
 
   plugin.getMapRotationDeg = function () {
@@ -729,6 +1013,10 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
         <label>User screen Y: <input id="suf-bias-y" type="number" step="0.01" min="0.5" max="0.9" value="${plugin.settings.viewportBiasY}"></label>
         <label>Heading indicator: <input id="suf-heading-enabled" type="checkbox" ${plugin.settings.headingIndicatorEnabled ? 'checked' : ''}></label>
         <label>Heading-up map: <input id="suf-heading-up-enabled" type="checkbox" ${plugin.settings.headingUpEnabled ? 'checked' : ''}></label>
+        <label>Use geolocation heading: <input id="suf-geolocation-heading" type="checkbox" ${plugin.settings.useGeolocationHeading ? 'checked' : ''}></label>
+        <label>Use device orientation heading: <input id="suf-device-heading" type="checkbox" ${plugin.settings.deviceOrientationHeadingEnabled ? 'checked' : ''}></label>
+        <label>Stationary orientation max speed m/s: <input id="suf-stationary-orientation-speed" type="number" step="0.1" min="0" value="${plugin.settings.stationaryOrientationMaxSpeedMps}"></label>
+        <label>Auto-stop simulator on real GPS: <input id="suf-autostop-sim" type="checkbox" ${plugin.settings.autoStopSimulatorOnRealGps ? 'checked' : ''}></label>
         <label>Rotation smoothing: <input id="suf-rotation-smoothing" type="number" step="0.01" min="0.01" max="1" value="${plugin.settings.rotationSmoothing}"></label>
         <label>Rotation min speed m/s: <input id="suf-rotation-min-speed" type="number" step="0.5" min="0" value="${plugin.settings.rotationMinSpeedMps}"></label>
         <label>Simulator speed m/s: <input id="suf-sim-speed" type="number" step="1" min="0" value="${plugin.settings.simulatorSpeedMps}"></label>
@@ -764,6 +1052,10 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       plugin.settings.viewportBiasY = Number($('#suf-bias-y').val());
       plugin.settings.headingIndicatorEnabled = $('#suf-heading-enabled').is(':checked');
       plugin.settings.headingUpEnabled = $('#suf-heading-up-enabled').is(':checked');
+      plugin.settings.useGeolocationHeading = $('#suf-geolocation-heading').is(':checked');
+      plugin.settings.deviceOrientationHeadingEnabled = $('#suf-device-heading').is(':checked');
+      plugin.settings.stationaryOrientationMaxSpeedMps = Number($('#suf-stationary-orientation-speed').val());
+      plugin.settings.autoStopSimulatorOnRealGps = $('#suf-autostop-sim').is(':checked');
       plugin.settings.rotationSmoothing = Number($('#suf-rotation-smoothing').val());
       plugin.settings.rotationMinSpeedMps = Number($('#suf-rotation-min-speed').val());
       plugin.settings.simulatorSpeedMps = Number($('#suf-sim-speed').val());
@@ -782,6 +1074,12 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
       }
 
       if (!plugin.settings.headingUpEnabled) plugin.resetMapOrientation();
+      if (plugin.settings.deviceOrientationHeadingEnabled) {
+        plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
+      } else {
+        plugin.state.deviceOrientationBearingDeg = null;
+        plugin.state.deviceOrientationTimestampMs = null;
+      }
 
       if (plugin.simulator.options) {
         plugin.simulator.options.speedMps = plugin.settings.simulatorSpeedMps;
@@ -837,7 +1135,7 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
     return true;
   };
 
-  plugin.simulator.stop = function () {
+  plugin.simulator.stop = function (options = {}) {
     if (plugin.simulator.timer) {
       window.clearInterval(plugin.simulator.timer);
       plugin.simulator.timer = null;
@@ -845,7 +1143,12 @@ window.plugin.smoothUserFollow = window.plugin.smoothUserFollow || {};
 
     plugin.simulator.running = false;
     plugin.updateControl();
-    plugin.log('Simulator stopped');
+
+    if (options.reason === 'real-location') {
+      plugin.log('Simulator stopped because real GPS/location data arrived');
+    } else {
+      plugin.log('Simulator stopped');
+    }
   };
 
   plugin.simulator.getStartPosition = function () {

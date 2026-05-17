@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.6-dev
+
+- Auto-stop the simulator when real browser/IITC location fixes arrive.
+- Capture browser geolocation speed and heading when available.
+- Add supplemental browser geolocation while smooth follow is active so heading/speed metadata is available even if IITC already started its own watch.
+- Add optional device-orientation heading for stationary heading-up rotation.
+- Prefer movement heading while moving and device orientation while stationary or slow.
+- Add settings for geolocation heading, device-orientation heading, stationary orientation speed, and simulator auto-stop.
+
 ## 0.1.5-dev
 
 - Add experimental viewport bias so the user can sit lower in the visible map.
