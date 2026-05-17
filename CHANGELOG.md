@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2-dev
+
+- Point generated metadata at the real GitHub raw URLs.
+- Add an install section near the top of the README with links to the metadata and userscript files.
+
 ## 0.2.1-dev
 
 - Shorten the mini control labels from `SF`, `ROT`, and `BIAS` to `F`, `R`, and `B`.

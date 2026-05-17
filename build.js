@@ -9,8 +9,8 @@ const srcPath = path.join(root, 'src', 'follow-mode.js');
 const distDir = path.join(root, 'dist');
 const outPath = path.join(distDir, 'follow-mode.user.js');
 const metaPath = path.join(distDir, 'follow-mode.meta.js');
-const updateUrl = 'http://localhost:8000/dist/follow-mode.meta.js';
-const downloadUrl = 'http://localhost:8000/dist/follow-mode.user.js';
+const updateUrl = 'https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js';
+const downloadUrl = 'https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js';
 
 const buildTime = new Date().toISOString();
 const source = fs.readFileSync(srcPath, 'utf8')

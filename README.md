@@ -6,6 +6,16 @@ It keeps IITC's normal user-location marker updates, but replaces the abrupt
 camera catch-up behavior with smoother camera movement, optional heading-up map
 rotation, and optional viewport bias so more map is visible ahead of you.
 
+## Install
+
+Use the metadata URL with IITC Button or your external plugin manager:
+
+[follow-mode.meta.js](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js)
+
+Direct userscript link:
+
+[follow-mode.user.js](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js)
+
 ## Mini control
 
 The plugin adds a small Leaflet-style control on the left side of the map:
@@ -99,13 +109,9 @@ Then install from:
 http://localhost:8000/dist/follow-mode.user.js
 ```
 
-The generated `.user.js` and `.meta.js` headers point to the same local dev
-server:
-
-```text
-@updateURL   http://localhost:8000/dist/follow-mode.meta.js
-@downloadURL http://localhost:8000/dist/follow-mode.user.js
-```
+The generated `.user.js` and `.meta.js` headers now point to the real GitHub
+raw URLs. For local testing, load the localhost `.user.js` directly, or use
+your dev loader to override the source URL.
 
 Tampermonkey may cache aggressively. Bump `VERSION` or append a query string
 while testing.
