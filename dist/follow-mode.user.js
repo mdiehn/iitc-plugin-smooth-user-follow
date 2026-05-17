@@ -2,7 +2,7 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode
 // @category       Controls
-// @version        0.2.5-dev.20260517111502
+// @version        0.2.6-dev.20260517112049
 // @namespace      https://github.com/mdiehn/iitc-follow-mode
 // @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.meta.js
 // @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.user.js
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.5-dev.20260517111502';
-  plugin.buildTime = '2026-05-17T11:15:02.490Z';
+  plugin.version = '0.2.6-dev.20260517112049';
+  plugin.buildTime = '2026-05-17T11:20:49.624Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -103,11 +103,8 @@ window.plugin.followMode = window.plugin.followMode || {};
       supplementalGeolocationActive: false,
       deviceOrientationListenerStarted: false,
       deviceOrientationPermissionRequested: false,
-      control: null,
-      followButton: null,
-      rotationButton: null,
-      biasButton: null,
-      settingsButton: null,
+      optionsButtonId: null,
+      legacyOptionsButton: null,
       waitingNoticeShown: false,
       fallbackLayer: null,
       fallbackMarker: null,
@@ -139,14 +136,14 @@ window.plugin.followMode = window.plugin.followMode || {};
 
   plugin.setup = function () {
     plugin.injectStyles();
-    plugin.addControl();
+    plugin.addOptionsButton();
     plugin.waitForUserLocation();
   };
 
   plugin.waitForUserLocation = function () {
     if (plugin.hasRealUserLocation()) {
       plugin.wrapUserLocation();
-      plugin.updateControl();
+      plugin.updateOptionsButton();
       return;
     }
 
@@ -288,7 +285,7 @@ window.plugin.followMode = window.plugin.followMode || {};
         } else {
           plugin.stopCameraLoop();
         }
-        plugin.updateControl();
+        plugin.updateOptionsButton();
         return result;
       };
     }
@@ -315,7 +312,7 @@ window.plugin.followMode = window.plugin.followMode || {};
     }
 
     window.app?.setFollowMode?.(enabled);
-    plugin.updateControl();
+    plugin.updateOptionsButton();
 
     if (enabled) {
       plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
@@ -345,14 +342,14 @@ window.plugin.followMode = window.plugin.followMode || {};
       if (plugin.isFollowing()) plugin.startCameraLoop();
     }
     plugin.saveSettings();
-    plugin.updateControl();
+    plugin.updateOptionsButton();
   };
 
   plugin.toggleViewportBias = function () {
     plugin.settings.viewportBiasEnabled = !plugin.settings.viewportBiasEnabled;
     if (plugin.isFollowing()) plugin.startCameraLoop();
     plugin.saveSettings();
-    plugin.updateControl();
+    plugin.updateOptionsButton();
   };
 
   plugin.getCurrentUserLatLng = function () {
@@ -941,21 +938,9 @@ window.plugin.followMode = window.plugin.followMode || {};
     const style = document.createElement('style');
     style.id = 'follow-mode-style';
     style.textContent = `
-      .follow-mode-control a {
-        box-sizing: border-box;
-        width: 26px;
-        min-width: 26px;
-        height: 26px;
-        line-height: 26px;
-        padding: 0;
-        text-align: center;
+      #toolbox a.follow-mode-options-link,
+      #toolbox_component a.follow-mode-options-link {
         font-weight: bold;
-        font-size: 11px;
-        text-decoration: none;
-      }
-      .follow-mode-control a.fm-active {
-        background: #ffce00;
-        color: #000;
       }
       .follow-mode-dialog p {
         margin: 0.4em 0 0.7em;
@@ -1022,92 +1007,72 @@ window.plugin.followMode = window.plugin.followMode || {};
     document.head.appendChild(style);
   };
 
-  plugin.addControl = function () {
-    if (!window.L || !window.map || plugin.state.control) return;
+  plugin.addOptionsButton = function () {
+    if (plugin.state.optionsButtonId || plugin.state.legacyOptionsButton) return;
 
-    const FollowModeControl = L.Control.extend({
-      options: { position: 'topleft' },
+    if (window.IITC?.toolbox?.addButton) {
+      plugin.state.optionsButtonId = IITC.toolbox.addButton({
+        id: 'follow-mode-options',
+        label: 'Follow Mode Opt',
+        action: plugin.showOptions,
+      });
+      plugin.updateOptionsButton();
+      return;
+    }
 
-      onAdd() {
-        const container = L.DomUtil.create('div', 'leaflet-bar follow-mode-control');
+    const toolbox = document.getElementById('toolbox') || document.getElementById('toolbox_component');
+    if (!toolbox) {
+      window.setTimeout(plugin.addOptionsButton, 1000);
+      return;
+    }
 
-        const followButton = L.DomUtil.create('a', '', container);
-        followButton.href = '#';
-        followButton.textContent = 'F';
-        followButton.setAttribute('aria-label', 'Toggle smooth follow');
-
-        const rotationButton = L.DomUtil.create('a', '', container);
-        rotationButton.href = '#';
-        rotationButton.textContent = 'R';
-        rotationButton.setAttribute('aria-label', 'Toggle heading-up rotation');
-
-        const biasButton = L.DomUtil.create('a', '', container);
-        biasButton.href = '#';
-        biasButton.textContent = 'B';
-        biasButton.setAttribute('aria-label', 'Toggle viewport bias');
-
-        const settingsButton = L.DomUtil.create('a', '', container);
-        settingsButton.href = '#';
-        settingsButton.textContent = '=';
-        settingsButton.setAttribute('aria-label', 'Follow Mode settings');
-
-        L.DomEvent.disableClickPropagation(container);
-        L.DomEvent.disableScrollPropagation(container);
-
-        L.DomEvent.on(followButton, 'click', L.DomEvent.stop)
-          .on(followButton, 'click', plugin.toggleFollowing);
-        L.DomEvent.on(rotationButton, 'click', L.DomEvent.stop)
-          .on(rotationButton, 'click', plugin.toggleHeadingUp);
-        L.DomEvent.on(biasButton, 'click', L.DomEvent.stop)
-          .on(biasButton, 'click', plugin.toggleViewportBias);
-        L.DomEvent.on(settingsButton, 'click', L.DomEvent.stop)
-          .on(settingsButton, 'click', plugin.showDialog);
-
-        plugin.state.followButton = followButton;
-        plugin.state.rotationButton = rotationButton;
-        plugin.state.biasButton = biasButton;
-        plugin.state.settingsButton = settingsButton;
-
-        plugin.updateControl();
-        return container;
-      },
+    const link = document.createElement('a');
+    link.href = '#';
+    link.className = 'follow-mode-options-link';
+    link.textContent = 'Follow Mode Opt';
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      plugin.showOptions();
     });
 
-    plugin.state.control = new FollowModeControl();
-    plugin.state.control.addTo(window.map);
+    toolbox.appendChild(link);
+    plugin.state.legacyOptionsButton = link;
+    plugin.updateOptionsButton();
   };
 
-  plugin.updateControl = function () {
-    if (plugin.state.followButton) {
-      plugin.state.followButton.classList.toggle('fm-active', plugin.isFollowing());
+  plugin.updateOptionsButton = function () {
+    if (window.IITC?.toolbox?.updateButton && plugin.state.optionsButtonId) {
+      IITC.toolbox.updateButton(plugin.state.optionsButtonId, {
+        label: 'Follow Mode Opt',
+        action: plugin.showOptions,
+      });
     }
 
-    if (plugin.state.rotationButton) {
-      plugin.state.rotationButton.classList.toggle('fm-active', !!plugin.settings.headingUpEnabled);
-    }
-
-    if (plugin.state.biasButton) {
-      plugin.state.biasButton.classList.toggle('fm-active', !!plugin.settings.viewportBiasEnabled);
+    if (plugin.state.legacyOptionsButton) {
+      plugin.state.legacyOptionsButton.textContent = 'Follow Mode Opt';
     }
   };
 
-  plugin.showDialog = function () {
+  plugin.showOptions = function () {
     const simulatorLabel = plugin.simulator.running ? 'Stop simulator' : 'Start simulator';
     const html = `
       <div class="follow-mode-dialog">
         <p>Follow Mode gives IITC a navigation-style user-follow camera: smooth follow, optional heading-up rotation, and optional viewport bias.</p>
 
         <fieldset>
-          <legend>Main settings</legend>
+          <legend>Options</legend>
+          <label><input id="fm-follow-enabled" type="checkbox" ${plugin.isFollowing() ? 'checked' : ''}> Follow my location</label>
+          <label><input id="fm-heading-up" type="checkbox" ${plugin.settings.headingUpEnabled ? 'checked' : ''}> Heading-up map rotation</label>
+          <label><input id="fm-bias-enabled" type="checkbox" ${plugin.settings.viewportBiasEnabled ? 'checked' : ''}> Viewport bias</label>
           <label><input id="fm-heading-enabled" type="checkbox" ${plugin.settings.headingIndicatorEnabled ? 'checked' : ''}> Show heading indicator</label>
           <label><input id="fm-device-heading" type="checkbox" ${plugin.settings.deviceOrientationHeadingEnabled ? 'checked' : ''}> Use phone orientation when stopped or slow</label>
           <label>User screen position: <input id="fm-bias-y" type="number" step="0.01" min="0.5" max="0.9" value="${plugin.settings.viewportBiasY}"> <span>0.70 keeps you low on screen</span></label>
           <label><input id="fm-autostop-sim" type="checkbox" ${plugin.settings.autoStopSimulatorOnRealGps ? 'checked' : ''}> Stop simulator when real GPS arrives</label>
         </fieldset>
 
-        <p>The mini control handles the common toggles: <strong>F</strong>, <strong>R</strong>, <strong>B</strong>, and <strong>=</strong>.</p>
+        <p>Use <strong>Follow Mode Opt</strong> in the IITC toolbox/sidebar to reopen this panel.</p>
 
-        <button id="fm-toggle-dev-settings" type="button">Show dev settings</button>
+        <button id="fm-toggle-dev-settings" type="button">Show dev options</button>
         <div id="fm-dev-settings" class="fm-dev-settings">
           <fieldset>
             <legend>Camera tuning</legend>
@@ -1140,26 +1105,26 @@ window.plugin.followMode = window.plugin.followMode || {};
           </fieldset>
         </div>
 
-        <button id="fm-save-settings" type="button">Save</button>
+        <button id="fm-save-settings" type="button">Save options</button>
       </div>
     `;
 
     if (typeof dialog === 'function') {
       dialog({
-        title: 'Follow Mode',
+        title: 'Follow Mode Options',
         html,
         width: 430,
-        id: 'follow-mode-settings',
+        id: 'follow-mode-options',
       });
     } else {
-      alert('Follow Mode settings are available from window.plugin.followMode.settings');
+      alert('Follow Mode options are available from window.plugin.followMode.settings');
       return;
     }
 
     $('#fm-toggle-dev-settings').on('click', () => {
       const dev = $('#fm-dev-settings');
       dev.toggleClass('fm-open');
-      $('#fm-toggle-dev-settings').text(dev.hasClass('fm-open') ? 'Hide dev settings' : 'Show dev settings');
+      $('#fm-toggle-dev-settings').text(dev.hasClass('fm-open') ? 'Hide dev options' : 'Show dev options');
     });
 
     $('#fm-sim-toggle').on('click', () => {
@@ -1177,6 +1142,12 @@ window.plugin.followMode = window.plugin.followMode || {};
     const oldCameraIntervalMs = plugin.getCameraIntervalMs();
     const oldSimulatorIntervalMs = Number(plugin.simulator.options?.intervalMs || plugin.settings.simulatorIntervalMs);
 
+    const desiredFollowing = $('#fm-follow-enabled').is(':checked');
+    const oldHeadingUpEnabled = !!plugin.settings.headingUpEnabled;
+    const oldViewportBiasEnabled = !!plugin.settings.viewportBiasEnabled;
+
+    plugin.settings.headingUpEnabled = $('#fm-heading-up').is(':checked');
+    plugin.settings.viewportBiasEnabled = $('#fm-bias-enabled').is(':checked');
     plugin.settings.viewportBiasY = Number($('#fm-bias-y').val());
     plugin.settings.headingIndicatorEnabled = $('#fm-heading-enabled').is(':checked');
     plugin.settings.deviceOrientationHeadingEnabled = $('#fm-device-heading').is(':checked');
@@ -1195,6 +1166,23 @@ window.plugin.followMode = window.plugin.followMode || {};
     if ($('#fm-sim-segment').length) plugin.settings.simulatorSegmentLengthMeters = Number($('#fm-sim-segment').val());
 
     plugin.saveSettings();
+
+    if (desiredFollowing !== plugin.isFollowing()) {
+      plugin.setFollowing(desiredFollowing);
+    } else if (desiredFollowing) {
+      plugin.startCameraLoop();
+    }
+
+    if (!plugin.settings.headingUpEnabled) {
+      plugin.resetMapOrientation();
+    } else if (!oldHeadingUpEnabled && plugin.isFollowing()) {
+      plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
+      plugin.startCameraLoop();
+    }
+
+    if (oldViewportBiasEnabled !== plugin.settings.viewportBiasEnabled && plugin.isFollowing()) {
+      plugin.startCameraLoop();
+    }
 
     if (plugin.state.cameraAnimationFrame && plugin.getCameraIntervalMs() !== oldCameraIntervalMs) {
       plugin.stopCameraLoop();
@@ -1226,7 +1214,7 @@ window.plugin.followMode = window.plugin.followMode || {};
       plugin.simulator.timer = window.setInterval(plugin.simulator.step, Number(plugin.settings.simulatorIntervalMs));
     }
 
-    plugin.updateControl();
+    plugin.updateOptionsButton();
   };
 
   plugin.simulator.toggle = function () {
@@ -1264,7 +1252,7 @@ window.plugin.followMode = window.plugin.followMode || {};
 
     plugin.simulator.step();
     plugin.simulator.timer = window.setInterval(plugin.simulator.step, opts.intervalMs);
-    plugin.updateControl();
+    plugin.updateOptionsButton();
     plugin.log('Simulator started');
     return true;
   };
@@ -1276,7 +1264,7 @@ window.plugin.followMode = window.plugin.followMode || {};
     }
 
     plugin.simulator.running = false;
-    plugin.updateControl();
+    plugin.updateOptionsButton();
 
     if (options.reason === 'real-location') {
       plugin.log('Simulator stopped because real GPS/location data arrived');
