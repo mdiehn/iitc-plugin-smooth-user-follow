@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3-dev
+
+- Update the README top section to match the Portal Route style.
+- Add a clear bold install link to `follow-mode.user.js`.
+- Keep the plugin-manager metadata URL near the top of the README.
+
 ## 0.2.2-dev
 
 - Point generated metadata at the real GitHub raw URLs.

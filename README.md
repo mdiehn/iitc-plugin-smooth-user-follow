@@ -1,20 +1,20 @@
-# IITC Follow Mode
+# IITC plugin: Follow Mode
 
-Follow Mode gives IITC a more navigation-style user-location view.
+Follow Mode is an IITC plugin that makes the user-location view behave more like a navigation app.
 
-It keeps IITC's normal user-location marker updates, but replaces the abrupt
-camera catch-up behavior with smoother camera movement, optional heading-up map
-rotation, and optional viewport bias so more map is visible ahead of you.
+It keeps IITC's normal user-location marker updates, but replaces abrupt camera catch-up behavior with smoother movement, heading-up map rotation, and optional viewport bias so more map is visible ahead of you.
 
-## Install
+## Status
 
-Use the metadata URL with IITC Button or your external plugin manager:
+Latest development build: `0.2.3-dev`
 
-[follow-mode.meta.js](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js)
+Version 0.2.3-dev polishes the plugin for initial testing as a standalone IITC helper, with compact mini-control buttons, simpler settings, heading-up rotation, viewport bias, and a desktop movement simulator under dev settings.
 
-Direct userscript link:
+Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **R** when you want normal map interaction.
 
-[follow-mode.user.js](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js)
+**Install:** [`follow-mode.user.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js)
+
+Plugin-manager metadata URL: [`follow-mode.meta.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js)
 
 ## Mini control
 

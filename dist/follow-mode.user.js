@@ -2,7 +2,7 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode
 // @category       Controls
-// @version        0.2.2-dev
+// @version        0.2.3-dev
 // @namespace      https://github.com/mdiehn/iitc-follow-mode
 // @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.meta.js
 // @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/main/dist/follow-mode.user.js
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.2-dev';
-  plugin.buildTime = '2026-05-17T10:57:22.606Z';
+  plugin.version = '0.2.3-dev';
+  plugin.buildTime = '2026-05-17T11:00:52.099Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
