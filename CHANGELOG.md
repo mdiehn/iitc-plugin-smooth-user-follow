@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5-dev
+
+- Tighten the mini-control button width for the single-letter `F`, `R`, `B`, and `=` labels.
+- Remove the leftover extra horizontal padding from the earlier longer labels.
+
 ## 0.2.4-dev
 
 - Add branch-aware build URLs for generated `@updateURL` and `@downloadURL` metadata.

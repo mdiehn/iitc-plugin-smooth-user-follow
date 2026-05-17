@@ -6,9 +6,9 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.4-dev`
+Latest development build: `0.2.5-dev`
 
-Version 0.2.4-dev improves the build so dev builds get timestamped dist versions, branch-aware update URLs, generated metadata, and README install links updated during build.
+Version 0.2.5-dev tightens the mini control now that the labels are single letters.
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **R** when you want normal map interaction.
 
