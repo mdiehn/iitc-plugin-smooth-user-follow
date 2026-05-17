@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.7-dev
+
+- Update the userscript metadata description wording.
+- Use GitHub raw URLs in the README install and metadata links.
+
+## 0.2.6-dev
+
+- Remove the Leaflet mini control to avoid using map viewport space.
+- Add a **Follow Mode Opt** entry through IITC toolbox/sidebar controls.
+- Move Follow, heading-up rotation, and viewport-bias toggles into the Options panel.
+- Rename the user-facing dialog from Settings to Options.
+
 ## 0.2.5-dev
 
 - Tighten the mini-control button width for the single-letter `F`, `R`, `B`, and `=` labels.
