@@ -1014,17 +1014,17 @@ window.plugin.followMode = window.plugin.followMode || {};
 
         const followButton = L.DomUtil.create('a', '', container);
         followButton.href = '#';
-        followButton.textContent = 'SF';
+        followButton.textContent = 'F';
         followButton.setAttribute('aria-label', 'Toggle smooth follow');
 
         const rotationButton = L.DomUtil.create('a', '', container);
         rotationButton.href = '#';
-        rotationButton.textContent = 'ROT';
+        rotationButton.textContent = 'R';
         rotationButton.setAttribute('aria-label', 'Toggle heading-up rotation');
 
         const biasButton = L.DomUtil.create('a', '', container);
         biasButton.href = '#';
-        biasButton.textContent = 'BIAS';
+        biasButton.textContent = 'B';
         biasButton.setAttribute('aria-label', 'Toggle viewport bias');
 
         const settingsButton = L.DomUtil.create('a', '', container);
@@ -1086,7 +1086,7 @@ window.plugin.followMode = window.plugin.followMode || {};
           <label><input id="fm-autostop-sim" type="checkbox" ${plugin.settings.autoStopSimulatorOnRealGps ? 'checked' : ''}> Stop simulator when real GPS arrives</label>
         </fieldset>
 
-        <p>The mini control handles the common toggles: <strong>SF</strong>, <strong>ROT</strong>, <strong>BIAS</strong>, and <strong>=</strong>.</p>
+        <p>The mini control handles the common toggles: <strong>F</strong>, <strong>R</strong>, <strong>B</strong>, and <strong>=</strong>.</p>
 
         <button id="fm-toggle-dev-settings" type="button">Show dev settings</button>
         <div id="fm-dev-settings" class="fm-dev-settings">

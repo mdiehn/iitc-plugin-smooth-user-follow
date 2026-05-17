@@ -11,10 +11,10 @@ rotation, and optional viewport bias so more map is visible ahead of you.
 The plugin adds a small Leaflet-style control on the left side of the map:
 
 ```text
-SF    smooth follow on/off
-ROT   heading-up map rotation on/off
-BIAS  viewport bias on/off
-=     settings
+F   smooth follow on/off
+R   heading-up map rotation on/off
+B   viewport bias on/off
+=   settings
 ```
 
 The buttons highlight when enabled. The buttons intentionally do not use hover
@@ -71,7 +71,7 @@ orientation data.
 
 Heading-up rotation is done as a visual CSS rotation of Leaflet's map pane. This
 works for follow-mode viewing, but normal map tapping or dragging can feel odd
-while the map is rotated. Turn off **ROT** when you want normal IITC map
+while the map is rotated. Turn off **R** when you want normal IITC map
 interaction.
 
 ## Build

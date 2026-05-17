@@ -2,7 +2,7 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode
 // @category       Controls
-// @version        0.2.0-dev
+// @version        0.2.1-dev
 // @namespace      https://github.com/mdiehn/iitc-follow-mode
 // @updateURL      http://localhost:8000/dist/follow-mode.meta.js
 // @downloadURL    http://localhost:8000/dist/follow-mode.user.js
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.0-dev';
-  plugin.buildTime = '2026-05-17T10:47:59.446Z';
+  plugin.version = '0.2.1-dev';
+  plugin.buildTime = '2026-05-17T10:48:53.993Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -1031,17 +1031,17 @@ window.plugin.followMode = window.plugin.followMode || {};
 
         const followButton = L.DomUtil.create('a', '', container);
         followButton.href = '#';
-        followButton.textContent = 'SF';
+        followButton.textContent = 'F';
         followButton.setAttribute('aria-label', 'Toggle smooth follow');
 
         const rotationButton = L.DomUtil.create('a', '', container);
         rotationButton.href = '#';
-        rotationButton.textContent = 'ROT';
+        rotationButton.textContent = 'R';
         rotationButton.setAttribute('aria-label', 'Toggle heading-up rotation');
 
         const biasButton = L.DomUtil.create('a', '', container);
         biasButton.href = '#';
-        biasButton.textContent = 'BIAS';
+        biasButton.textContent = 'B';
         biasButton.setAttribute('aria-label', 'Toggle viewport bias');
 
         const settingsButton = L.DomUtil.create('a', '', container);
@@ -1103,7 +1103,7 @@ window.plugin.followMode = window.plugin.followMode || {};
           <label><input id="fm-autostop-sim" type="checkbox" ${plugin.settings.autoStopSimulatorOnRealGps ? 'checked' : ''}> Stop simulator when real GPS arrives</label>
         </fieldset>
 
-        <p>The mini control handles the common toggles: <strong>SF</strong>, <strong>ROT</strong>, <strong>BIAS</strong>, and <strong>=</strong>.</p>
+        <p>The mini control handles the common toggles: <strong>F</strong>, <strong>R</strong>, <strong>B</strong>, and <strong>=</strong>.</p>
 
         <button id="fm-toggle-dev-settings" type="button">Show dev settings</button>
         <div id="fm-dev-settings" class="fm-dev-settings">

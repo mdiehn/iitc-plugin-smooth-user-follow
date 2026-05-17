@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1-dev
+
+- Shorten the mini control labels from `SF`, `ROT`, and `BIAS` to `F`, `R`, and `B`.
+- Update the README and settings text to explain the compact control labels.
+
 ## 0.2.0-dev
 
 - Rename the plugin to Follow Mode.
