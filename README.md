@@ -12,9 +12,9 @@ Version 0.2.8-dev applies option changes from the dialog OK button and removes t
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
 
-**Install:** [`follow-mode.user.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.user.js)
+**Install:** [`follow-mode.user.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/iitc-plugin-follow-mode.user.js)
 
-Plugin-manager metadata URL: [`follow-mode.meta.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.meta.js)
+Plugin-manager metadata URL: [`follow-mode.meta.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/iitn-plugin-follow-mode.meta.js)
 
 ## Quick start
 
