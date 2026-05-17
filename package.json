@@ -1,6 +1,6 @@
 {
   "name": "iitc-follow-mode",
-  "version": "0.2.6-dev",
+  "version": "0.2.7-dev",
   "private": true,
   "description": "IITC plugin that adds smooth, heading-up user-location follow mode.",
   "scripts": {

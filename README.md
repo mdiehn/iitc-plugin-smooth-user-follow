@@ -6,15 +6,15 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.6-dev`
+Latest development build: `0.2.7-dev`
 
-Version 0.2.6-dev removes the map mini control and moves the user-facing controls into a **Follow Mode Opt** entry in the IITC toolbox/sidebar.
+Version 0.2.7-dev updates the userscript metadata description and uses GitHub raw URLs in the README install links.
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
 
-**Install:** [`follow-mode.user.js`](https://github.com/mdiehn/iitc-follow-mode/raw/refs/heads/main/dist/follow-mode.user.js)
+**Install:** [`follow-mode.user.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.user.js)
 
-Plugin-manager metadata URL: [`follow-mode.meta.js`](https://github.com/mdiehn/iitc-follow-mode/raw/refs/heads/main/dist/follow-mode.meta.js)
+Plugin-manager metadata URL: [`follow-mode.meta.js`](https://raw.githubusercontent.com/mdiehn/iitc-follow-mode/refs/heads/main/dist/follow-mode.meta.js)
 
 ## Quick start
 

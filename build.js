@@ -57,8 +57,8 @@ function getCurrentBranch() {
 function updateReadmeInstallLinks() {
   if (!fs.existsSync(readmeFile)) return;
 
-  const readmeInstallUrl = `https://github.com/${repo}/raw/refs/heads/${branch}/dist/follow-mode.user.js`;
-  const readmeMetaUrl = `https://github.com/${repo}/raw/refs/heads/${branch}/dist/follow-mode.meta.js`;
+  const readmeInstallUrl = `https://raw.githubusercontent.com/${repo}/refs/heads/${branch}/dist/follow-mode.user.js`;
+  const readmeMetaUrl = `https://raw.githubusercontent.com/${repo}/refs/heads/${branch}/dist/follow-mode.meta.js`;
   const readme = fs.readFileSync(readmeFile, 'utf8');
   const updated = readme
     .replace(
@@ -94,7 +94,7 @@ const metadata = `// ==UserScript==
 // @namespace      https://github.com/${repo}
 // @updateURL      ${updateUrl}
 // @downloadURL    ${downloadUrl}
-// @description    Use smooth heading-up IITC user-location follow movement.
+// @description    Use smoothed, heading-up, IITC user-location follow movement.
 // @author         Mike Diehn and Frank
 // @match          https://intel.ingress.com/*
 // @match          https://*.ingress.com/intel*

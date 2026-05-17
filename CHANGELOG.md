@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.7-dev
+
+- Update the userscript metadata description wording.
+- Use GitHub raw URLs in the README install and metadata links.
+
 ## 0.2.6-dev
 
 - Remove the Leaflet mini control to avoid using map viewport space.
