@@ -88,8 +88,8 @@ const source = fs.readFileSync(srcPath, 'utf8')
 
 const metadata = `// ==UserScript==
 // @id             iitc-plugin-follow-mode
-// @name           IITC plugin: Follow Mode
-// @category       Controls
+// @name           IITC plugin: Follow Mode Add-on
+// @category       Add-on
 // @version        ${distVersion}
 // @namespace      https://github.com/${repo}
 // @updateURL      ${updateUrl}

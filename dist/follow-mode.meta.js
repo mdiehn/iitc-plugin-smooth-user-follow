@@ -1,8 +1,8 @@
 // ==UserScript==
 // @id             iitc-plugin-follow-mode
-// @name           IITC plugin: Follow Mode
-// @category       Controls
-// @version        0.2.12-dev.20260524103227
+// @name           IITC plugin: Follow Mode Add-on
+// @category       Add-on
+// @version        0.2.13-dev.20260524104417
 // @namespace      https://github.com/mdiehn/iitc-plugin-follow-mode
 // @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.meta.js
 // @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.user.js

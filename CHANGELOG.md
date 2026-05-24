@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.13-dev
+
+- Position the plugin as **IITC plugin: Follow Mode Add-on**.
+- Change the userscript category to **Add-on**.
+- Update README wording to describe Follow Mode as an add-on for IITC **User Location**.
+- Promote the ahead-portal loading field test into its own README section while keeping it under dev options.
+
 ## 0.2.12-dev
 
 - Add first-pass ahead portal loading while Follow Mode is active.

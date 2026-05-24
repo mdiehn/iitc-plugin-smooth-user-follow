@@ -1,14 +1,14 @@
-# IITC plugin: Follow Mode
+# IITC plugin: Follow Mode Add-on
 
-Follow Mode is an IITC plugin that makes the user-location view behave more like a navigation app.
+Follow Mode Add-on improves IITC's **User Location** follow behavior with smoother movement, heading-up rotation, and viewport bias.
 
-It keeps IITC's normal user-location marker updates, but replaces abrupt camera catch-up behavior with smoother movement, heading-up map rotation, and optional viewport bias so more map is visible ahead of you.
+It keeps IITC's normal user-location marker updates, but replaces abrupt camera catch-up behavior with smoother movement so IITC feels more like a navigation app.
 
 ## Status
 
-Latest development build: `0.2.12-dev`
+Latest development build: `0.2.13-dev`
 
-Version 0.2.12-dev adds a field-test option to load portals ahead while following, without moving the map to trigger normal IITC polling.
+Version 0.2.13-dev positions Follow Mode as an IITC User Location add-on and documents the ahead-portal loading field-test feature.
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
 
@@ -56,7 +56,7 @@ The detailed tuning controls live under **Show dev options**:
 - Heading indicator overlay on the user marker.
 - Desktop simulator for testing movement without walking or driving.
 - Simulator auto-stop when real GPS/location data arrives.
-- Field-test ahead portal loading while following, based on current heading.
+- Optional experimental loading of portals ahead of your current heading.
 
 ## Requirements
 
@@ -65,13 +65,19 @@ For real GPS follow behavior, enable IITC's built-in **User Location** plugin. F
 For desktop simulation only, Follow Mode can run without IITC User Location. It creates a small fallback marker so the camera behavior can be tested from a desktop browser.
 
 
-## Ahead portal loading field test
+## Load portals ahead
 
-The **Load portals ahead while following** option asks IITC for a small set of map-data tiles ahead of your current heading while Follow Mode is active. It is meant for road testing whether portals can appear along the path without manually panning the map.
+Follow Mode can optionally ask IITC to load portal data ahead of your current heading while follow mode is active.
 
-This first pass is heading-based, not route-corridor-based. It points a wedge in front of the current heading and fetches a limited number of nearby tiles. Curves, sparse areas, and stale heading data can still miss portals.
+This helps portals appear along the road or trail before they enter the visible map area, without manually panning the map.
 
-The tuning controls live under **Show dev options**. Keep the tile limit and polling interval conservative while testing so local camera movement does not turn into excessive Intel requests.
+The first version is heading-based: it looks ahead in the direction Follow Mode thinks you are moving. It does not yet follow a Portal Route path, curve with roads, or request a true route corridor.
+
+Enable it from:
+
+**Follow Mode Opt → Show dev options → Load portals ahead while following**
+
+Keep the tile limit and polling interval conservative while testing so local camera movement does not turn into excessive Intel requests.
 
 ## Heading behavior
 

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @id             iitc-plugin-follow-mode
-// @name           IITC plugin: Follow Mode
-// @category       Controls
-// @version        0.2.12-dev.20260524103227
+// @name           IITC plugin: Follow Mode Add-on
+// @category       Add-on
+// @version        0.2.13-dev.20260524104417
 // @namespace      https://github.com/mdiehn/iitc-plugin-follow-mode
 // @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.meta.js
 // @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.user.js
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.12-dev.20260524103227';
-  plugin.buildTime = '2026-05-24T10:32:27.763Z';
+  plugin.version = '0.2.13-dev.20260524104417';
+  plugin.buildTime = '2026-05-24T10:44:17.466Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -1251,7 +1251,7 @@ if (plugin.state.legacyOptionsButton) {
 const simulatorLabel = plugin.simulator.running ? 'Stop simulator' : 'Start simulator';
 const html = `
   <div class="follow-mode-dialog">
-    <p>Follow Mode gives IITC a navigation-style user-follow camera: smooth follow, optional heading-up rotation, and optional viewport bias.</p>
+    <p>Follow Mode Add-on improves IITC User Location with a navigation-style follow camera: smooth follow, optional heading-up rotation, and optional viewport bias.</p>
 
     <fieldset>
       <legend>Options</legend>

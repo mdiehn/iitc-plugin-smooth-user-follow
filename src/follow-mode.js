@@ -1234,7 +1234,7 @@ if (plugin.state.legacyOptionsButton) {
 const simulatorLabel = plugin.simulator.running ? 'Stop simulator' : 'Start simulator';
 const html = `
   <div class="follow-mode-dialog">
-    <p>Follow Mode gives IITC a navigation-style user-follow camera: smooth follow, optional heading-up rotation, and optional viewport bias.</p>
+    <p>Follow Mode Add-on improves IITC User Location with a navigation-style follow camera: smooth follow, optional heading-up rotation, and optional viewport bias.</p>
 
     <fieldset>
       <legend>Options</legend>
