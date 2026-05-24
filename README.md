@@ -6,11 +6,11 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.13-dev`
+Latest development build: `0.2.14-dev`
 
-Version 0.2.13-dev positions Follow Mode as an IITC User Location add-on and documents the ahead-portal loading field-test feature.
+Version 0.2.14-dev suspends the follow camera and freezes heading-up rotation during manual map drag or zoom, with an explicit **Resume Follow** control.
 
-Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
+Heading-up rotation is useful while following your location. If you manually drag or zoom the map, Follow Mode now suspends camera movement and freezes the current rotation until you explicitly resume follow.
 
 **Install:** [`follow-mode.user.js`](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.user.js)
 
@@ -37,6 +37,7 @@ The main options are:
 - **Show heading indicator**: draw a small direction arrow over the user marker.
 - **Use phone orientation when stopped or slow**: use device orientation when available, so heading-up can work while standing still.
 - **Load portals ahead while following**: field-test option to fetch map-data tiles ahead of your current heading while Follow Mode is active.
+- **Suspend follow camera when I drag or zoom the map**: stop camera movement and freeze the current rotation during manual map interaction.
 - **User screen position**: tune how low the marker sits when viewport bias is enabled. `0.70` means about 70% down from the top.
 
 The detailed tuning controls live under **Show dev options**:
@@ -57,6 +58,7 @@ The detailed tuning controls live under **Show dev options**:
 - Desktop simulator for testing movement without walking or driving.
 - Simulator auto-stop when real GPS/location data arrives.
 - Optional experimental loading of portals ahead of your current heading.
+- Manual drag/zoom suspension with an explicit **Resume Follow** control.
 
 ## Requirements
 
@@ -85,9 +87,13 @@ Browser geolocation heading is direction of travel. It usually does not change w
 
 Phone orientation heading is used when available and when the user is stopped or moving slowly. Some mobile browsers may require an extra permission prompt for orientation data.
 
-## Heading-up caveat
+## Manual map interaction
 
-Heading-up rotation is done as a visual CSS rotation of Leaflet's map pane. This works for follow-mode viewing, but normal map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal IITC map interaction.
+Heading-up rotation is done as a visual CSS rotation of Leaflet's map pane. This works well for follow-mode viewing, but normal map dragging uses Leaflet's unrotated coordinate system.
+
+To avoid unexpected rotation changes under your finger, Follow Mode suspends the follow camera when you manually drag or zoom the map. It keeps the current rotation frozen, continues updating the user marker and heading indicator, and shows a temporary **Resume Follow** button. Tap **Resume Follow** when you want the camera and heading-up rotation to take over again.
+
+Turn off **Heading-up map rotation** when you want normal IITC map interaction for a longer period.
 
 ## Build
 

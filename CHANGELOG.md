@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.14-dev
+
+- Suspend the follow camera when the user manually drags or zooms the map.
+- Freeze the current heading-up rotation while suspended instead of snapping north-up or continuing to rotate under the user's finger.
+- Add a temporary **Resume Follow** button while suspended.
+- Add an option to disable manual-interaction suspension if needed.
+
 ## 0.2.13-dev
 
 - Position the plugin as **IITC plugin: Follow Mode Add-on**.

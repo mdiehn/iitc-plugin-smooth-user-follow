@@ -45,6 +45,7 @@ aheadFetchIntervalMs: 12000,
 aheadFetchMinMoveMeters: 120,
 aheadFetchMinBearingChangeDeg: 18,
 aheadFetchMaxTiles: 25,
+pauseOnManualInteraction: true,
   };
 
   plugin.loadStoredSettings = function () {
@@ -87,6 +88,10 @@ try {
   mapRotationDeg: 0,
   headingMarker: null,
   headingBearingDeg: null,
+  followSuspended: false,
+  followSuspendedReason: null,
+  resumeControl: null,
+  mapInteractionListenersAdded: false,
   deviceOrientationBearingDeg: null,
   deviceOrientationTimestampMs: null,
   supplementalGeolocationWatchId: null,
@@ -131,6 +136,7 @@ console.warn('[Follow Mode]', ...args);
   plugin.setup = function () {
 plugin.injectStyles();
 plugin.addOptionsButton();
+plugin.addMapInteractionListeners();
 plugin.waitForUserLocation();
   };
 
@@ -300,6 +306,7 @@ return plugin.settings.enabled && (plugin.state.following || !!window.plugin.use
   plugin.setFollowing = function (following) {
 const enabled = !!following;
 plugin.state.following = enabled;
+if (enabled) plugin.clearSuspendedFollow();
 
 if (window.plugin.userLocation) {
   window.plugin.userLocation.follow = enabled;
@@ -307,6 +314,7 @@ if (window.plugin.userLocation) {
 
 window.app?.setFollowMode?.(enabled);
 plugin.updateOptionsButton();
+plugin.updateResumeControl();
 
 if (enabled) {
   plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
@@ -316,12 +324,13 @@ if (enabled) {
     plugin.recordLocationFix(latlng, { timestampMs: Date.now() });
     plugin.updateCameraTarget(latlng, { snap: true });
   }
-  plugin.startCameraLoop();
+  if (!plugin.isFollowSuspended()) plugin.startCameraLoop();
   plugin.maybeFetchAhead({ force: true });
 } else {
   plugin.stopCameraLoop();
   plugin.stopSupplementalGeolocationWatch();
   plugin.resetMapOrientation();
+  plugin.clearSuspendedFollow();
 }
   };
 
@@ -334,7 +343,7 @@ plugin.settings.headingUpEnabled = !plugin.settings.headingUpEnabled;
 if (!plugin.settings.headingUpEnabled) plugin.resetMapOrientation();
 if (plugin.settings.headingUpEnabled) {
   plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
-  if (plugin.isFollowing()) plugin.startCameraLoop();
+  if (plugin.isFollowing() && !plugin.isFollowSuspended()) plugin.startCameraLoop();
 }
 plugin.saveSettings();
 plugin.updateOptionsButton();
@@ -342,9 +351,46 @@ plugin.updateOptionsButton();
 
   plugin.toggleViewportBias = function () {
 plugin.settings.viewportBiasEnabled = !plugin.settings.viewportBiasEnabled;
-if (plugin.isFollowing()) plugin.startCameraLoop();
+if (plugin.isFollowing() && !plugin.isFollowSuspended()) plugin.startCameraLoop();
 plugin.saveSettings();
 plugin.updateOptionsButton();
+  };
+
+
+  plugin.isFollowSuspended = function () {
+return !!plugin.state.followSuspended;
+  };
+
+  plugin.suspendFollowForManualInteraction = function () {
+if (!plugin.settings.pauseOnManualInteraction) return;
+if (!plugin.isFollowing()) return;
+if (plugin.state.followSuspended) return;
+
+plugin.state.followSuspended = true;
+plugin.state.followSuspendedReason = 'manual-interaction';
+plugin.stopCameraLoop();
+plugin.updateResumeControl();
+plugin.updateOptionsButton();
+plugin.log('Follow camera and rotation suspended after manual map interaction');
+  };
+
+  plugin.clearSuspendedFollow = function () {
+if (!plugin.state.followSuspended && !plugin.state.followSuspendedReason) return;
+
+plugin.state.followSuspended = false;
+plugin.state.followSuspendedReason = null;
+plugin.updateResumeControl();
+plugin.updateOptionsButton();
+  };
+
+  plugin.resumeFollow = function () {
+plugin.clearSuspendedFollow();
+plugin.setFollowing(true);
+
+const latlng = plugin.getPredictedLatLng(Date.now()) || plugin.getCurrentUserLatLng();
+if (latlng) plugin.updateCameraTarget(latlng);
+plugin.startCameraLoop();
+plugin.maybeFetchAhead({ force: true });
   };
 
   plugin.getCurrentUserLatLng = function () {
@@ -582,8 +628,10 @@ plugin.state.headingBearingDeg = effectiveHeading;
 plugin.updateHeadingIndicator(latlng, effectiveHeading);
 
 if (plugin.isFollowing()) {
-  plugin.updateCameraTarget(plugin.getPredictedLatLng(Date.now()));
-  plugin.startCameraLoop();
+  if (!plugin.isFollowSuspended()) {
+    plugin.updateCameraTarget(plugin.getPredictedLatLng(Date.now()));
+    plugin.startCameraLoop();
+  }
   plugin.maybeFetchAhead();
 }
   };
@@ -606,7 +654,7 @@ const effectiveHeading = plugin.getEffectiveHeadingDeg(plugin.state.latestFix);
 plugin.state.headingBearingDeg = effectiveHeading;
 if (latlng) plugin.updateHeadingIndicator(latlng, effectiveHeading);
 
-if (plugin.isFollowing()) plugin.startCameraLoop();
+if (plugin.isFollowing() && !plugin.isFollowSuspended()) plugin.startCameraLoop();
   };
 
   plugin.getStationaryOrientationMaxSpeedMps = function () {
@@ -928,6 +976,12 @@ if (!plugin.isFollowing()) {
   return;
 }
 
+if (plugin.isFollowSuspended()) {
+  plugin.stopCameraLoop();
+  plugin.applyMapPaneTransform();
+  return;
+}
+
 const target = plugin.getPredictedLatLng(Date.now());
 if (!window.map || !target) {
   plugin.state.cameraAnimationFrame = window.requestAnimationFrame(plugin.stepCameraTowardTarget);
@@ -1149,6 +1203,27 @@ style.textContent = `
   .follow-mode-dialog code {
     user-select: text;
   }
+  .follow-mode-resume-control {
+    position: absolute;
+    left: 50%;
+    bottom: 1.3em;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: none;
+    pointer-events: auto;
+  }
+  .follow-mode-resume-control.fm-visible {
+    display: block;
+  }
+  .follow-mode-resume-control button {
+    padding: 0.45em 0.75em;
+    border: 1px solid #111;
+    border-radius: 0.35em;
+    background: #ffce00;
+    color: #111;
+    font-weight: bold;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+  }
   .follow-mode-fallback-marker div {
     width: 18px;
     height: 18px;
@@ -1184,6 +1259,35 @@ style.textContent = `
 document.head.appendChild(style);
   };
 
+
+  plugin.ensureResumeControl = function () {
+if (plugin.state.resumeControl || !window.map?.getContainer) return plugin.state.resumeControl;
+
+const container = window.map.getContainer();
+const control = document.createElement('div');
+control.className = 'follow-mode-resume-control';
+
+const button = document.createElement('button');
+button.type = 'button';
+button.textContent = 'Resume Follow';
+button.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  plugin.resumeFollow();
+});
+
+control.appendChild(button);
+container.appendChild(control);
+plugin.state.resumeControl = control;
+return control;
+  };
+
+  plugin.updateResumeControl = function () {
+const control = plugin.ensureResumeControl();
+if (!control) return;
+control.classList.toggle('fm-visible', plugin.isFollowing() && plugin.isFollowSuspended());
+  };
+
   plugin.addOptionsButton = function () {
 if (plugin.state.optionsButtonId || plugin.state.legacyOptionsButton) return;
 
@@ -1217,6 +1321,16 @@ plugin.state.legacyOptionsButton = link;
 plugin.updateOptionsButton();
   };
 
+  plugin.addMapInteractionListeners = function () {
+if (!window.map || plugin.state.mapInteractionListenersAdded) {
+  if (!window.map) window.setTimeout(plugin.addMapInteractionListeners, 1000);
+  return;
+}
+
+plugin.state.mapInteractionListenersAdded = true;
+window.map.on('dragstart zoomstart', plugin.suspendFollowForManualInteraction);
+};
+
   plugin.updateOptionsButton = function () {
 if (window.IITC?.toolbox?.updateButton && plugin.state.optionsButtonId) {
   IITC.toolbox.updateButton(plugin.state.optionsButtonId, {
@@ -1235,6 +1349,7 @@ const simulatorLabel = plugin.simulator.running ? 'Stop simulator' : 'Start simu
 const html = `
   <div class="follow-mode-dialog">
     <p>Follow Mode Add-on improves IITC User Location with a navigation-style follow camera: smooth follow, optional heading-up rotation, and optional viewport bias.</p>
+    ${plugin.isFollowSuspended() ? '<p><strong>Follow camera is suspended.</strong> Tap <em>Resume Follow</em> to resume camera movement and heading-up rotation.</p>' : ''}
 
     <fieldset>
       <legend>Options</legend>
@@ -1244,11 +1359,13 @@ const html = `
       <label><input id="fm-heading-enabled" type="checkbox" ${plugin.settings.headingIndicatorEnabled ? 'checked' : ''}> Show heading indicator</label>
       <label><input id="fm-device-heading" type="checkbox" ${plugin.settings.deviceOrientationHeadingEnabled ? 'checked' : ''}> Use phone orientation when stopped or slow</label>
       <label><input id="fm-ahead-fetch" type="checkbox" ${plugin.settings.aheadFetchEnabled ? 'checked' : ''}> Load portals ahead while following</label>
+      <label><input id="fm-pause-on-interaction" type="checkbox" ${plugin.settings.pauseOnManualInteraction ? 'checked' : ''}> Suspend follow camera when I drag or zoom the map</label>
       <label>User screen position: <input id="fm-bias-y" type="number" step="0.01" min="0.5" max="0.9" value="${plugin.settings.viewportBiasY}"> <span>0.70 keeps you low on screen</span></label>
       <label><input id="fm-autostop-sim" type="checkbox" ${plugin.settings.autoStopSimulatorOnRealGps ? 'checked' : ''}> Stop simulator when real GPS arrives</label>
     </fieldset>
 
     <p>Use <strong>Follow Mode Opt</strong> in the IITC toolbox/sidebar to reopen this panel.</p>
+    ${plugin.isFollowSuspended() ? '<button id="fm-resume-follow" type="button">Resume Follow</button>' : ''}
 
     <button id="fm-toggle-dev-settings" type="button">Show dev options</button>
     <div id="fm-dev-settings" class="fm-dev-settings">
@@ -1319,6 +1436,12 @@ $('#fm-toggle-dev-settings').on('click', () => {
   $('#fm-toggle-dev-settings').text(dev.hasClass('fm-open') ? 'Hide dev options' : 'Show dev options');
 });
 
+$('#fm-resume-follow').on('click', () => {
+  plugin.saveSettingsFromDialog();
+  plugin.resumeFollow();
+  $('.ui-dialog-content#follow-mode-options').dialog('close');
+});
+
 $('#fm-sim-toggle').on('click', () => {
   plugin.saveSettingsFromDialog();
   plugin.simulator.toggle();
@@ -1346,6 +1469,7 @@ plugin.settings.viewportBiasY = Number($('#fm-bias-y').val());
 plugin.settings.headingIndicatorEnabled = $('#fm-heading-enabled').is(':checked');
 plugin.settings.deviceOrientationHeadingEnabled = $('#fm-device-heading').is(':checked');
 plugin.settings.aheadFetchEnabled = $('#fm-ahead-fetch').is(':checked');
+plugin.settings.pauseOnManualInteraction = $('#fm-pause-on-interaction').is(':checked');
 plugin.settings.autoStopSimulatorOnRealGps = $('#fm-autostop-sim').is(':checked');
 
 if ($('#fm-camera-interval').length) plugin.settings.cameraIntervalMs = Number($('#fm-camera-interval').val());
@@ -1367,9 +1491,13 @@ if ($('#fm-sim-segment').length) plugin.settings.simulatorSegmentLengthMeters = 
 
 plugin.saveSettings();
 
+if (!plugin.settings.pauseOnManualInteraction && plugin.isFollowSuspended()) {
+  plugin.clearSuspendedFollow();
+}
+
 if (desiredFollowing !== plugin.isFollowing()) {
   plugin.setFollowing(desiredFollowing);
-} else if (desiredFollowing) {
+} else if (desiredFollowing && !plugin.isFollowSuspended()) {
   plugin.startCameraLoop();
 }
 
@@ -1380,7 +1508,7 @@ if (!plugin.settings.headingUpEnabled) {
   plugin.startCameraLoop();
 }
 
-if (oldViewportBiasEnabled !== plugin.settings.viewportBiasEnabled && plugin.isFollowing()) {
+if (oldViewportBiasEnabled !== plugin.settings.viewportBiasEnabled && plugin.isFollowing() && !plugin.isFollowSuspended()) {
   plugin.startCameraLoop();
 }
 
