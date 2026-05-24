@@ -1208,47 +1208,44 @@ style.textContent = `
   .follow-mode-dialog code {
     user-select: text;
   }
-  .follow-mode-reticle-control {
-    background: rgba(8, 8, 8, 0.82);
-    border: 1px solid #777;
-    border-radius: 4px;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
-  }
-  .follow-mode-reticle-control button {
-    position: relative;
-    display: block;
-    width: 30px;
-    height: 30px;
+  .follow-mode-reticle-control a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
     padding: 0;
-    border: 0;
-    background: transparent;
-    color: #ccc;
+    margin: 0;
+    box-sizing: border-box;
+    color: #fff;
+    text-align: center;
   }
-  .follow-mode-reticle-control button::before {
-    content: "";
-    position: absolute;
-    left: 7px;
-    top: 7px;
-    width: 14px;
-    height: 14px;
-    border: 2px solid currentColor;
-    border-radius: 50%;
+  .follow-mode-reticle-control a:hover,
+  .follow-mode-reticle-control a:focus {
+    color: #fff;
   }
-  .follow-mode-reticle-control button::after {
-    content: "";
-    position: absolute;
-    left: 14px;
-    top: 4px;
-    width: 2px;
-    height: 22px;
-    background: currentColor;
-    box-shadow: -10px 10px 0 -0.5px currentColor, 10px 10px 0 -0.5px currentColor;
-    opacity: 0.85;
+  .follow-mode-reticle-control svg {
+    display: block;
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    transform: translate(-1px, -1px);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
   }
-  .follow-mode-reticle-control.fm-following button {
+  .follow-mode-reticle-control.fm-following a,
+  .follow-mode-reticle-control.fm-following a:hover,
+  .follow-mode-reticle-control.fm-following a:focus {
     color: #ffce00;
   }
-  .follow-mode-reticle-control.fm-suspended button {
+  .follow-mode-reticle-control.fm-suspended a,
+  .follow-mode-reticle-control.fm-suspended a:hover,
+  .follow-mode-reticle-control.fm-suspended a:focus {
     color: #ff8a00;
   }
   .follow-mode-resume-control {
@@ -1314,10 +1311,12 @@ if (plugin.state.reticleControl || !window.map || !L?.control) return plugin.sta
 const FollowReticleControl = L.Control.extend({
   options: { position: 'topleft' },
   onAdd() {
-    const container = L.DomUtil.create('div', 'leaflet-control follow-mode-reticle-control');
-    const button = L.DomUtil.create('button', '', container);
-    button.type = 'button';
+    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control follow-mode-reticle-control');
+    const button = L.DomUtil.create('a', '', container);
+    button.href = '#';
+    button.setAttribute('role', 'button');
     button.setAttribute('aria-label', 'Follow Mode');
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
 
     L.DomEvent.disableClickPropagation(container);
     L.DomEvent.disableScrollPropagation(container);

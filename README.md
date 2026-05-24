@@ -6,9 +6,9 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.15-dev`
+Latest development build: `0.2.18-dev`
 
-Version 0.2.15-dev adds a small reticle map control for starting, stopping, and resuming Follow Mode from the field.
+Version 0.2.18-dev centers the reticle glyph in the standard control button so the fill and icon sit more evenly.
 
 Heading-up rotation is useful while following your location. If you manually drag or zoom the map, Follow Mode now suspends camera movement and freezes the current rotation until you explicitly resume follow.
 

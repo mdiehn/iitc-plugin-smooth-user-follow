@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.19-dev
+
+- Tuned the reticle follow control icon after field UI testing.
+- Enlarged the SVG reticle circles to radius 10 and 3.
+- Nudged the reticle glyph slightly up and left in the standard control button.
+
+## 0.2.18-dev
+
+- Center the reticle glyph with flex layout inside the standard control button.
+- Remove SVG margin offsets so the icon and button fill align more evenly.
+
+## 0.2.17-dev
+
+- Let the reticle follow control use the normal Leaflet/IITC control frame instead of overriding its border and shadow.
+- Slightly enlarge and recenter the reticle glyph.
+
+## 0.2.16-dev
+
+- Refine the reticle follow control to use a normal IITC/Leaflet mini-control size.
+- Replace the custom black button background with the normal mini-control styling.
+- Use a cleaner IITC-like reticle glyph for the Follow Mode control.
+
 ## 0.2.15-dev
 
 - Add a small reticle map control for starting, stopping, and resuming Follow Mode from the map.
