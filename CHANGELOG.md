@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.12-dev
+
+- Add first-pass ahead portal loading while Follow Mode is active.
+- Fetch a conservative set of IITC map-data tiles ahead of the current heading without moving the map.
+- Add dev options for ahead distance, wedge angle, poll interval, movement threshold, and tile limit.
+
+## 0.2.11-dev
+
+- Make Follow Mode's heading indicator easier to see during road testing.
+- Recommend disabling IITC's built-in user heading display while using Follow Mode.
 ## 0.2.10-dev
 
 - Update repository/package naming and generated URLs for `mdiehn/iitc-plugin-follow-mode`.

@@ -6,9 +6,9 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.10-dev`
+Latest development build: `0.2.12-dev`
 
-Version 0.2.10-dev updates the repository metadata and install URLs for the real `iitc-plugin-follow-mode` repo while keeping the dist files named `follow-mode.user.js` and `follow-mode.meta.js`.
+Version 0.2.12-dev adds a field-test option to load portals ahead while following, without moving the map to trigger normal IITC polling.
 
 Heading-up rotation is useful while following your location, but normal IITC map tapping or dragging can feel odd while the map is rotated. Turn off **Heading-up map rotation** when you want normal map interaction.
 
@@ -19,10 +19,11 @@ Plugin-manager metadata URL: [`follow-mode.meta.js`](https://github.com/mdiehn/i
 ## Quick start
 
 1. Enable IITC's built-in **User Location** plugin.
-2. Open IITC on mobile or desktop.
-3. Open **Follow Mode Opt** from the IITC toolbox/sidebar.
-4. Enable **Follow my location**.
-5. Leave **Heading-up map rotation** and **Viewport bias** on if you want navigation-style behavior.
+2. In IITC's User Location settings, disable IITC's built-in user heading display. Follow Mode provides its own heading indicator and rotation.
+3. Open IITC on mobile or desktop.
+4. Open **Follow Mode Opt** from the IITC toolbox/sidebar.
+5. Enable **Follow my location**.
+6. Leave **Heading-up map rotation** and **Viewport bias** on if you want navigation-style behavior.
 
 ## Options panel
 
@@ -35,6 +36,7 @@ The main options are:
 - **Viewport bias**: keep your marker lower on the screen so more map is visible ahead.
 - **Show heading indicator**: draw a small direction arrow over the user marker.
 - **Use phone orientation when stopped or slow**: use device orientation when available, so heading-up can work while standing still.
+- **Load portals ahead while following**: field-test option to fetch map-data tiles ahead of your current heading while Follow Mode is active.
 - **User screen position**: tune how low the marker sits when viewport bias is enabled. `0.70` means about 70% down from the top.
 
 The detailed tuning controls live under **Show dev options**:
@@ -42,6 +44,7 @@ The detailed tuning controls live under **Show dev options**:
 - camera timing and smoothing
 - prediction limit
 - rotation smoothing and speed threshold
+- ahead-portal distance, wedge angle, poll interval, and tile limit
 - simulator speed, interval, and segment length
 - simulator start/stop button
 
@@ -53,12 +56,22 @@ The detailed tuning controls live under **Show dev options**:
 - Heading indicator overlay on the user marker.
 - Desktop simulator for testing movement without walking or driving.
 - Simulator auto-stop when real GPS/location data arrives.
+- Field-test ahead portal loading while following, based on current heading.
 
 ## Requirements
 
 For real GPS follow behavior, enable IITC's built-in **User Location** plugin. Follow Mode wraps that plugin so IITC still owns the user marker, accuracy circle, and normal user-location hooks.
 
 For desktop simulation only, Follow Mode can run without IITC User Location. It creates a small fallback marker so the camera behavior can be tested from a desktop browser.
+
+
+## Ahead portal loading field test
+
+The **Load portals ahead while following** option asks IITC for a small set of map-data tiles ahead of your current heading while Follow Mode is active. It is meant for road testing whether portals can appear along the path without manually panning the map.
+
+This first pass is heading-based, not route-corridor-based. It points a wedge in front of the current heading and fetches a limited number of nearby tiles. Curves, sparse areas, and stale heading data can still miss portals.
+
+The tuning controls live under **Show dev options**. Keep the tile limit and polling interval conservative while testing so local camera movement does not turn into excessive Intel requests.
 
 ## Heading behavior
 
