@@ -6,9 +6,11 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.18-dev`
+Current release: `1.0.0`
 
-Version 0.2.18-dev centers the reticle glyph in the standard control button so the fill and icon sit more evenly.
+Version 1.0.0 is the first release candidate for general use. It keeps the smooth follow camera, heading-up rotation, viewport bias, heading indicator, desktop simulator, and manual-interaction suspension.
+
+Ahead portal loading is included as an experimental option, but it is disabled by default for release.
 
 Heading-up rotation is useful while following your location. If you manually drag or zoom the map, Follow Mode now suspends camera movement and freezes the current rotation until you explicitly resume follow.
 
@@ -36,7 +38,7 @@ The main options are:
 - **Viewport bias**: keep your marker lower on the screen so more map is visible ahead.
 - **Show heading indicator**: draw a small direction arrow over the user marker.
 - **Use phone orientation when stopped or slow**: use device orientation when available, so heading-up can work while standing still.
-- **Load portals ahead while following**: field-test option to fetch map-data tiles ahead of your current heading while Follow Mode is active.
+- **Load portals ahead while following**: experimental option to fetch map-data tiles ahead of your current heading while Follow Mode is active. This is disabled by default.
 - **Suspend follow camera when I drag or zoom the map**: stop camera movement and freeze the current rotation during manual map interaction.
 - **User screen position**: tune how low the marker sits when viewport bias is enabled. `0.70` means about 70% down from the top.
 
@@ -57,7 +59,7 @@ The detailed tuning controls live under **Show dev options**:
 - Heading indicator overlay on the user marker.
 - Desktop simulator for testing movement without walking or driving.
 - Simulator auto-stop when real GPS/location data arrives.
-- Optional experimental loading of portals ahead of your current heading.
+- Optional experimental loading of portals ahead of your current heading, disabled by default.
 - Manual drag/zoom suspension with an explicit **Resume Follow** control.
 - Small reticle map control for starting, stopping, and resuming Follow Mode.
 
@@ -70,17 +72,17 @@ For desktop simulation only, Follow Mode can run without IITC User Location. It 
 
 ## Load portals ahead
 
-Follow Mode can optionally ask IITC to load portal data ahead of your current heading while follow mode is active.
+Ahead portal loading is experimental and is disabled by default in the 1.0.0 release.
 
-This helps portals appear along the road or trail before they enter the visible map area, without manually panning the map.
+When enabled, Follow Mode asks IITC to load map-data tiles ahead of your current heading while follow mode is active. This can help portals appear along the road or trail before they enter the visible map area, without manually panning the map.
 
-The first version is heading-based: it looks ahead in the direction Follow Mode thinks you are moving. It does not yet follow a Portal Route path, curve with roads, or request a true route corridor.
+The current implementation is heading-based: it looks ahead in the direction Follow Mode thinks you are moving. It does not yet follow a Portal Route path, curve with roads, or request a true route corridor.
 
-Enable it from:
+Enable it only when you are intentionally testing it:
 
 **Follow Mode Opt → Show dev options → Load portals ahead while following**
 
-Keep the tile limit and polling interval conservative while testing so local camera movement does not turn into excessive Intel requests.
+Keep the tile limit low and the polling interval conservative. This feature makes extra Intel map-data requests beyond normal viewing, so it should be used carefully and left off unless needed.
 
 ## Heading behavior
 
@@ -159,6 +161,7 @@ window.plugin.followMode.simulator.start({
   headingIndicatorEnabled: true,
   headingUpEnabled: true,
   deviceOrientationHeadingEnabled: true,
+  aheadFetchEnabled: false,
   simulatorSpeedMps: 12,
   simulatorIntervalMs: 250,
 }

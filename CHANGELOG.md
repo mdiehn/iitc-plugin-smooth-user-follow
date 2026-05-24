@@ -1,7 +1,10 @@
 # Changelog
 
-## 0.2.19-dev
+## 1.0.0
 
+- Prepare the first general release.
+- Keep ahead portal loading available as an experimental dev option, but disable it by default for release.
+- Document the extra Intel map-data requests made by ahead portal loading.
 - Tuned the reticle follow control icon after field UI testing.
 - Enlarged the SVG reticle circles to radius 10 and 3.
 - Nudged the reticle glyph slightly up and left in the standard control button.

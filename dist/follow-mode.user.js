@@ -2,7 +2,7 @@
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode Add-on
 // @category       Addon
-// @version        0.2.19-dev.20260524161917
+// @version        1.0.0
 // @namespace      https://github.com/mdiehn/iitc-plugin-follow-mode
 // @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.meta.js
 // @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.user.js
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.19-dev.20260524161917';
-  plugin.buildTime = '2026-05-24T20:19:17.561Z';
+  plugin.version = '1.0.0';
+  plugin.buildTime = '2026-05-24T20:42:42.224Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -55,7 +55,7 @@ rotationMinSpeedMps: 2,
 simulatorSpeedMps: 12,
 simulatorIntervalMs: 250,
 simulatorSegmentLengthMeters: 350,
-aheadFetchEnabled: true,
+aheadFetchEnabled: false,
 aheadFetchDistanceMeters: 1200,
 aheadFetchHalfAngleDeg: 35,
 aheadFetchIntervalMs: 12000,
