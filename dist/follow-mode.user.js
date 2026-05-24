@@ -29,7 +29,7 @@ window.plugin.followMode = window.plugin.followMode || {};
 
   plugin.pluginId = 'follow-mode';
   plugin.version = '1.0.0';
-  plugin.buildTime = '2026-05-24T20:42:42.224Z';
+  plugin.buildTime = '2026-05-24T20:47:37.065Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 

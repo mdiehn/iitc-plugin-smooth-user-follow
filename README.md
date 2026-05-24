@@ -1,102 +1,164 @@
-# IITC plugin: Follow Mode Add-on
+# IITC Follow Mode Add-on
 
-Follow Mode Add-on improves IITC's **User Location** follow behavior with smoother movement, heading-up rotation, and viewport bias.
+A small IITC add-on that makes the **User Location** follow camera smoother and more useful while walking, biking, or driving.
 
-It keeps IITC's normal user-location marker updates, but replaces abrupt camera catch-up behavior with smoother movement so IITC feels more like a navigation app.
+Follow Mode keeps IITC's normal user-location marker, but changes how the map follows it:
 
-## Status
+- smoother camera movement
+- optional heading-up map rotation
+- optional screen bias so more map is visible ahead of you
+- small heading indicator on the user marker
+- manual drag/zoom suspension so the plugin does not fight you
+
+## Install
+
+Install the plugin here:
+
+**[follow-mode.user.js](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.user.js)**
+
+Plugin-manager metadata URL:
+
+**[follow-mode.meta.js](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.meta.js)**
 
 Current release: `1.0.0`
 
-Version 1.0.0 is the first release candidate for general use. It keeps the smooth follow camera, heading-up rotation, viewport bias, heading indicator, desktop simulator, and manual-interaction suspension.
+## Requirements
 
-Ahead portal loading is included as an experimental option, but it is disabled by default for release.
+Enable IITC's built-in **User Location** plugin first.
 
-Heading-up rotation is useful while following your location. If you manually drag or zoom the map, Follow Mode now suspends camera movement and freezes the current rotation until you explicitly resume follow.
+Follow Mode depends on IITC User Location for the actual GPS marker, accuracy circle, and location updates. This plugin only improves how the map camera follows that location.
 
-**Install:** [`follow-mode.user.js`](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.user.js)
+Recommended: in IITC's User Location settings, disable IITC's built-in user heading display. Follow Mode has its own heading indicator, and using both can be visually noisy.
 
-Plugin-manager metadata URL: [`follow-mode.meta.js`](https://github.com/mdiehn/iitc-plugin-follow-mode/raw/refs/heads/main/dist/follow-mode.meta.js)
+## Quick use
 
-## Quick start
+1. Install the plugin.
+2. Enable IITC's built-in **User Location** plugin.
+3. Open Intel/IITC.
+4. Tap the small reticle control on the map to start following your location.
+5. Tap it again to stop.
+6. If you drag or zoom the map, Follow Mode suspends the camera. Tap the reticle again, or use **Resume Follow**, to resume.
 
-1. Enable IITC's built-in **User Location** plugin.
-2. In IITC's User Location settings, disable IITC's built-in user heading display. Follow Mode provides its own heading indicator and rotation.
-3. Open IITC on mobile or desktop.
-4. Tap the small reticle map control to start Follow Mode, or open **Follow Mode Opt** from the IITC toolbox/sidebar.
-5. Leave **Heading-up map rotation** and **Viewport bias** on if you want navigation-style behavior.
-6. If follow is suspended after dragging or zooming, tap the reticle control or **Resume Follow** to resume.
+## Where the options are
 
-## Options panel
+Open **Follow Mode Opt** from IITC's toolbox/sidebar.
 
-Follow Mode adds a **Follow Mode Opt** entry to IITC's toolbox/sidebar for options. It also adds a small reticle map control for field use: tap it to start Follow Mode, tap again to stop, or tap it while suspended to resume.
+The options dialog has the normal user-facing controls near the top. Extra tuning and simulator controls are hidden under **Show dev options**.
 
-The main options are:
+The small reticle control on the map is meant for field use:
 
-- **Follow my location**: turn smooth camera follow on or off.
-- **Heading-up map rotation**: rotate the map so your heading points toward the top of the screen.
-- **Viewport bias**: keep your marker lower on the screen so more map is visible ahead.
-- **Show heading indicator**: draw a small direction arrow over the user marker.
-- **Use phone orientation when stopped or slow**: use device orientation when available, so heading-up can work while standing still.
-- **Load portals ahead while following**: experimental option to fetch map-data tiles ahead of your current heading while Follow Mode is active. This is disabled by default.
-- **Suspend follow camera when I drag or zoom the map**: stop camera movement and freeze the current rotation during manual map interaction.
-- **User screen position**: tune how low the marker sits when viewport bias is enabled. `0.70` means about 70% down from the top.
+- tap once to start Follow Mode
+- tap again to stop Follow Mode
+- tap while suspended to resume the follow camera
 
-The detailed tuning controls live under **Show dev options**:
+## Main options
+
+### Follow my location
+
+Turns the smooth follow camera on or off.
+
+When this is enabled, Follow Mode eases the map toward your current or predicted position instead of letting IITC jump the map abruptly.
+
+### Heading-up map rotation
+
+Rotates the map so your heading points toward the top of the screen.
+
+This makes IITC feel more like a navigation app. Turn it off when you want normal north-up map behavior.
+
+### Viewport bias
+
+Keeps your marker lower on the screen so more map is visible ahead of you.
+
+The **User screen position** option controls how far down the marker sits. `0.70` means roughly 70% down from the top of the screen.
+
+### Show heading indicator
+
+Draws a small direction indicator over the user marker.
+
+This can replace IITC User Location's built-in heading arrow, which may be too large or distracting depending on your setup.
+
+### Use phone orientation when stopped or slow
+
+Uses phone orientation when available, so heading-up can still work while you are standing still or moving slowly.
+
+Browser GPS heading usually means direction of travel. It often does not update just because you rotate the phone in place.
+
+Some mobile browsers may ask for motion/orientation permission.
+
+### Suspend follow camera when I drag or zoom the map
+
+Stops the follow camera from fighting manual map interaction.
+
+When you drag or zoom the map, Follow Mode freezes camera movement and keeps the current rotation. Your user marker still updates. Use the reticle control or **Resume Follow** to continue following.
+
+This should usually stay enabled.
+
+## Advanced/dev options
+
+The dev section includes tuning controls for:
 
 - camera timing and smoothing
 - prediction limit
 - rotation smoothing and speed threshold
-- ahead-portal distance, wedge angle, poll interval, and tile limit
 - simulator speed, interval, and segment length
-- simulator start/stop button
+- optional ahead portal loading
 
-## Main features
+Most users should not need these.
 
-- Smooth follow camera that eases toward a predicted user position.
-- Heading-up map rotation using movement heading, browser GPS heading, or phone orientation when available.
-- Viewport bias that keeps the user lower on the screen, leaving more room ahead.
-- Heading indicator overlay on the user marker.
-- Desktop simulator for testing movement without walking or driving.
-- Simulator auto-stop when real GPS/location data arrives.
-- Optional experimental loading of portals ahead of your current heading, disabled by default.
-- Manual drag/zoom suspension with an explicit **Resume Follow** control.
-- Small reticle map control for starting, stopping, and resuming Follow Mode.
+## Ahead portal loading
 
-## Requirements
+Ahead portal loading is experimental and is **disabled by default**.
 
-For real GPS follow behavior, enable IITC's built-in **User Location** plugin. Follow Mode wraps that plugin so IITC still owns the user marker, accuracy circle, and normal user-location hooks.
+When enabled, Follow Mode asks IITC to load map-data tiles ahead of your current heading while Follow Mode is active. This may help portals appear before they enter the visible map area.
 
-For desktop simulation only, Follow Mode can run without IITC User Location. It creates a small fallback marker so the camera behavior can be tested from a desktop browser.
+Important notes:
 
+- It makes extra Intel map-data requests beyond normal viewing.
+- It is heading-based, not route-based.
+- It does not follow roads, trails, or Portal Route paths.
+- It should be used conservatively.
+- Leave it off unless you are intentionally testing it.
 
-## Load portals ahead
-
-Ahead portal loading is experimental and is disabled by default in the 1.0.0 release.
-
-When enabled, Follow Mode asks IITC to load map-data tiles ahead of your current heading while follow mode is active. This can help portals appear along the road or trail before they enter the visible map area, without manually panning the map.
-
-The current implementation is heading-based: it looks ahead in the direction Follow Mode thinks you are moving. It does not yet follow a Portal Route path, curve with roads, or request a true route corridor.
-
-Enable it only when you are intentionally testing it:
+To find it:
 
 **Follow Mode Opt → Show dev options → Load portals ahead while following**
 
-Keep the tile limit low and the polling interval conservative. This feature makes extra Intel map-data requests beyond normal viewing, so it should be used carefully and left off unless needed.
+Keep the tile limit low and the polling interval conservative.
 
-## Heading behavior
+## Manual map behavior
 
-Browser geolocation heading is direction of travel. It usually does not change when the phone rotates in place while standing still.
+Heading-up rotation is done by visually rotating Leaflet's map pane. That is useful while following your own location, but normal Leaflet dragging is still based on the unrotated map.
 
-Phone orientation heading is used when available and when the user is stopped or moving slowly. Some mobile browsers may require an extra permission prompt for orientation data.
+For that reason, Follow Mode suspends the follow camera when you manually drag or zoom. This avoids surprising movement while your finger is on the map.
 
-## Manual map interaction
+Turn off **Heading-up map rotation** when you want to browse the map normally for a while.
 
-Heading-up rotation is done as a visual CSS rotation of Leaflet's map pane. This works well for follow-mode viewing, but normal map dragging uses Leaflet's unrotated coordinate system.
+## Desktop simulator
 
-To avoid unexpected rotation changes under your finger, Follow Mode suspends the follow camera when you manually drag or zoom the map. It keeps the current rotation frozen, continues updating the user marker and heading indicator, and shows a temporary **Resume Follow** button. Tap **Resume Follow** when you want the camera and heading-up rotation to take over again.
+The dev options include a small simulator for desktop testing. It creates simulated movement so you can test camera follow, heading-up rotation, and viewport bias without walking or driving.
 
-Turn off **Heading-up map rotation** when you want normal IITC map interaction for a longer period.
+The simulator stops automatically when real GPS/location data arrives.
+
+Console helpers are also available:
+
+```js
+window.plugin.followMode.setFollowing(true);
+window.plugin.followMode.setFollowing(false);
+
+window.plugin.followMode.simulator.start();
+window.plugin.followMode.simulator.stop();
+window.plugin.followMode.simulator.step();
+```
+
+Optional simulator settings:
+
+```js
+window.plugin.followMode.simulator.start({
+  speedMps: 30,
+  intervalMs: 250,
+  segmentLengthMeters: 350,
+});
+```
 
 ## Build
 
@@ -123,30 +185,9 @@ Then install from:
 http://localhost:8000/dist/follow-mode.user.js
 ```
 
-The generated `.user.js` and `.meta.js` headers point to the current Git branch on GitHub. For local testing, load the localhost `.user.js` directly, or use your dev loader to override the source URL.
+The generated `.user.js` and `.meta.js` headers point to the current Git branch on GitHub. For local testing, load the localhost `.user.js` directly, or use a dev loader to override the source URL.
 
 Tampermonkey may cache aggressively. Bump `VERSION` or append a query string while testing.
-
-## Console helpers
-
-```js
-window.plugin.followMode.setFollowing(true);
-window.plugin.followMode.setFollowing(false);
-
-window.plugin.followMode.simulator.start();
-window.plugin.followMode.simulator.stop();
-window.plugin.followMode.simulator.step();
-```
-
-Optional simulator settings:
-
-```js
-window.plugin.followMode.simulator.start({
-  speedMps: 30,
-  intervalMs: 250,
-  segmentLengthMeters: 350,
-});
-```
 
 ## Current defaults
 
