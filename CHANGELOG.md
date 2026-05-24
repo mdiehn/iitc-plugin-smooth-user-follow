@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.15-dev
+
+- Add a small reticle map control for starting, stopping, and resuming Follow Mode from the map.
+- Keep the existing **Follow Mode Opt** panel for options and tuning.
+
 ## 0.2.14-dev
 
 - Suspend the follow camera when the user manually drags or zooms the map.

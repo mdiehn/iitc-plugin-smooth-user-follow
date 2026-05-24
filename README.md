@@ -6,9 +6,9 @@ It keeps IITC's normal user-location marker updates, but replaces abrupt camera 
 
 ## Status
 
-Latest development build: `0.2.14-dev`
+Latest development build: `0.2.15-dev`
 
-Version 0.2.14-dev suspends the follow camera and freezes heading-up rotation during manual map drag or zoom, with an explicit **Resume Follow** control.
+Version 0.2.15-dev adds a small reticle map control for starting, stopping, and resuming Follow Mode from the field.
 
 Heading-up rotation is useful while following your location. If you manually drag or zoom the map, Follow Mode now suspends camera movement and freezes the current rotation until you explicitly resume follow.
 
@@ -21,13 +21,13 @@ Plugin-manager metadata URL: [`follow-mode.meta.js`](https://github.com/mdiehn/i
 1. Enable IITC's built-in **User Location** plugin.
 2. In IITC's User Location settings, disable IITC's built-in user heading display. Follow Mode provides its own heading indicator and rotation.
 3. Open IITC on mobile or desktop.
-4. Open **Follow Mode Opt** from the IITC toolbox/sidebar.
-5. Enable **Follow my location**.
-6. Leave **Heading-up map rotation** and **Viewport bias** on if you want navigation-style behavior.
+4. Tap the small reticle map control to start Follow Mode, or open **Follow Mode Opt** from the IITC toolbox/sidebar.
+5. Leave **Heading-up map rotation** and **Viewport bias** on if you want navigation-style behavior.
+6. If follow is suspended after dragging or zooming, tap the reticle control or **Resume Follow** to resume.
 
 ## Options panel
 
-Follow Mode adds a **Follow Mode Opt** entry to IITC's toolbox/sidebar rather than using map-space controls.
+Follow Mode adds a **Follow Mode Opt** entry to IITC's toolbox/sidebar for options. It also adds a small reticle map control for field use: tap it to start Follow Mode, tap again to stop, or tap it while suspended to resume.
 
 The main options are:
 
@@ -59,6 +59,7 @@ The detailed tuning controls live under **Show dev options**:
 - Simulator auto-stop when real GPS/location data arrives.
 - Optional experimental loading of portals ahead of your current heading.
 - Manual drag/zoom suspension with an explicit **Resume Follow** control.
+- Small reticle map control for starting, stopping, and resuming Follow Mode.
 
 ## Requirements
 

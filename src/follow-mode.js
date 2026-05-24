@@ -91,6 +91,7 @@ try {
   followSuspended: false,
   followSuspendedReason: null,
   resumeControl: null,
+  reticleControl: null,
   mapInteractionListenersAdded: false,
   deviceOrientationBearingDeg: null,
   deviceOrientationTimestampMs: null,
@@ -136,6 +137,7 @@ console.warn('[Follow Mode]', ...args);
   plugin.setup = function () {
 plugin.injectStyles();
 plugin.addOptionsButton();
+plugin.ensureReticleControl();
 plugin.addMapInteractionListeners();
 plugin.waitForUserLocation();
   };
@@ -315,6 +317,7 @@ if (window.plugin.userLocation) {
 window.app?.setFollowMode?.(enabled);
 plugin.updateOptionsButton();
 plugin.updateResumeControl();
+plugin.updateReticleControl();
 
 if (enabled) {
   plugin.maybeStartDeviceOrientation().catch((error) => plugin.warn('Device orientation is not available:', error));
@@ -370,6 +373,7 @@ plugin.state.followSuspended = true;
 plugin.state.followSuspendedReason = 'manual-interaction';
 plugin.stopCameraLoop();
 plugin.updateResumeControl();
+plugin.updateReticleControl();
 plugin.updateOptionsButton();
 plugin.log('Follow camera and rotation suspended after manual map interaction');
   };
@@ -380,6 +384,7 @@ if (!plugin.state.followSuspended && !plugin.state.followSuspendedReason) return
 plugin.state.followSuspended = false;
 plugin.state.followSuspendedReason = null;
 plugin.updateResumeControl();
+plugin.updateReticleControl();
 plugin.updateOptionsButton();
   };
 
@@ -1203,6 +1208,49 @@ style.textContent = `
   .follow-mode-dialog code {
     user-select: text;
   }
+  .follow-mode-reticle-control {
+    background: rgba(8, 8, 8, 0.82);
+    border: 1px solid #777;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+  }
+  .follow-mode-reticle-control button {
+    position: relative;
+    display: block;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #ccc;
+  }
+  .follow-mode-reticle-control button::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+  }
+  .follow-mode-reticle-control button::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    top: 4px;
+    width: 2px;
+    height: 22px;
+    background: currentColor;
+    box-shadow: -10px 10px 0 -0.5px currentColor, 10px 10px 0 -0.5px currentColor;
+    opacity: 0.85;
+  }
+  .follow-mode-reticle-control.fm-following button {
+    color: #ffce00;
+  }
+  .follow-mode-reticle-control.fm-suspended button {
+    color: #ff8a00;
+  }
   .follow-mode-resume-control {
     position: absolute;
     left: 50%;
@@ -1259,6 +1307,47 @@ style.textContent = `
 document.head.appendChild(style);
   };
 
+
+  plugin.ensureReticleControl = function () {
+if (plugin.state.reticleControl || !window.map || !L?.control) return plugin.state.reticleControl;
+
+const FollowReticleControl = L.Control.extend({
+  options: { position: 'topleft' },
+  onAdd() {
+    const container = L.DomUtil.create('div', 'leaflet-control follow-mode-reticle-control');
+    const button = L.DomUtil.create('button', '', container);
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Follow Mode');
+
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+    L.DomEvent.on(button, 'click', (event) => {
+      L.DomEvent.stop(event);
+      if (plugin.isFollowing() && !plugin.isFollowSuspended()) {
+        plugin.setFollowing(false);
+      } else {
+        plugin.resumeFollow();
+      }
+    });
+
+    return container;
+  },
+});
+
+plugin.state.reticleControl = new FollowReticleControl();
+plugin.state.reticleControl.addTo(window.map);
+plugin.updateReticleControl();
+return plugin.state.reticleControl;
+  };
+
+  plugin.updateReticleControl = function () {
+const control = plugin.state.reticleControl;
+const container = control?.getContainer?.();
+if (!container) return;
+
+container.classList.toggle('fm-following', plugin.isFollowing() && !plugin.isFollowSuspended());
+container.classList.toggle('fm-suspended', plugin.isFollowing() && plugin.isFollowSuspended());
+  };
 
   plugin.ensureResumeControl = function () {
 if (plugin.state.resumeControl || !window.map?.getContainer) return plugin.state.resumeControl;
