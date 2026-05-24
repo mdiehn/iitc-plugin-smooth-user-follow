@@ -1,8 +1,8 @@
 // ==UserScript==
 // @id             iitc-plugin-follow-mode
 // @name           IITC plugin: Follow Mode Add-on
-// @category       Add-on
-// @version        0.2.19-dev.20260524075830
+// @category       Addon
+// @version        0.2.19-dev.20260524161917
 // @namespace      https://github.com/mdiehn/iitc-plugin-follow-mode
 // @updateURL      https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.meta.js
 // @downloadURL    https://raw.githubusercontent.com/mdiehn/iitc-plugin-follow-mode/refs/heads/main/dist/follow-mode.user.js
@@ -28,8 +28,8 @@ window.plugin.followMode = window.plugin.followMode || {};
   const plugin = window.plugin.followMode;
 
   plugin.pluginId = 'follow-mode';
-  plugin.version = '0.2.19-dev.20260524075830';
-  plugin.buildTime = '2026-05-24T11:58:30.294Z';
+  plugin.version = '0.2.19-dev.20260524161917';
+  plugin.buildTime = '2026-05-24T20:19:17.561Z';
 
   plugin.storageKey = 'plugin-follow-mode-settings';
 
@@ -1333,7 +1333,7 @@ const FollowReticleControl = L.Control.extend({
     button.href = '#';
     button.setAttribute('role', 'button');
     button.setAttribute('aria-label', 'Follow Mode');
-    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2.5"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
 
     L.DomEvent.disableClickPropagation(container);
     L.DomEvent.disableScrollPropagation(container);

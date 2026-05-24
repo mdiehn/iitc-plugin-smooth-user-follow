@@ -1316,7 +1316,7 @@ const FollowReticleControl = L.Control.extend({
     button.href = '#';
     button.setAttribute('role', 'button');
     button.setAttribute('aria-label', 'Follow Mode');
-    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2.5"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
 
     L.DomEvent.disableClickPropagation(container);
     L.DomEvent.disableScrollPropagation(container);
